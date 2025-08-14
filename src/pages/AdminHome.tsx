@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Shield, Eye, LogOut, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import HeatMap from '@/components/ui/HeatMap';
+// If the file exists elsewhere, update the path accordingly, for example:
+import Piechart from '../components/ui/Piechart';
+// Or, if the file does not exist, create it in src/components/ui/Piechart3D.tsx with a basic export like below:
+
+// src/components/ui/Piechart3D.tsx
+// import React from 'react';
+// const Piechart3D = (props: any) => <div>Piechart3D Placeholder</div>;
+// export default Piechart3D;
 
 interface Complaint {
   id: string;
@@ -181,67 +190,93 @@ const AdminHome = () => {
           </Card>
         </div>
 
-        {/* Complaints Table */}
-        <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-foreground">Complaints Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reporter</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {complaints.map((complaint) => (
-                    <TableRow key={complaint.id}>
-                      <TableCell className="font-medium">{complaint.id}</TableCell>
-                      <TableCell>{complaint.category}</TableCell>
-                      <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
-                      <TableCell>{complaint.location}</TableCell>
-                      <TableCell>{complaint.date}</TableCell>
-                      <TableCell>{complaint.reporterName}</TableCell>
-                      <TableCell>
-                        <Badge className={getPriorityColor(complaint.priority)}>
-                          {complaint.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusColor(complaint.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(complaint.status)}
-                            <span>{complaint.status}</span>
-                          </div>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
-                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        {/* Main Content: Heatmap left, Piechart middle, Complaints right */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Heatmap Section (Left, NO Card/Box) */}
+          <div>
+            <div style={{ height: '400px', width: '100%' }}>
+              <HeatMap />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Pie Chart (Middle) */}
+          <div className="flex flex-col items-center justify-center">
+            <Card className="bg-card/95 backdrop-blur-sm border-destructive/20 w-full">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-foreground">Complaints by Priority</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Piechart
+                  high={complaints.filter(c => c.priority === 'high').length}
+                  medium={complaints.filter(c => c.priority === 'medium').length}
+                  low={complaints.filter(c => c.priority === 'low').length}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Complaints Overview Section (Right) */}
+          <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-foreground">Complaints Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Reporter</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {complaints.map((complaint) => (
+                      <TableRow key={complaint.id}>
+                        <TableCell className="font-medium">{complaint.id}</TableCell>
+                        <TableCell>{complaint.category}</TableCell>
+                        <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
+                        <TableCell>{complaint.location}</TableCell>
+                        <TableCell>{complaint.date}</TableCell>
+                        <TableCell>{complaint.reporterName}</TableCell>
+                        <TableCell>
+                          <Badge className={getPriorityColor(complaint.priority)}>
+                            {complaint.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={getStatusColor(complaint.status)}>
+                            <div className="flex items-center space-x-1">
+                              {getStatusIcon(complaint.status)}
+                              <span>{complaint.status}</span>
+                            </div>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
+                            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
