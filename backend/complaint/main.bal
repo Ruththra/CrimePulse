@@ -18,11 +18,31 @@ mongodb:Client mongoClient = check new ({
 });
 //_________________________________________________________________________________
 
+// The service-level CORS config applies globally to each `resource`.
+http:CorsConfig corsConfig = {
+    allowCredentials: true,
+    allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID", "Access-Control-Allow-Origin"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowOrigins: ["http://localhost:8080/complaint"],
+    exposeHeaders: ["Content-Length", "ETag"]
+};
+
+
 listener http:Listener complaintListen = new (8081);
-// listener http:Listener complaintListen = new (8081, host = "http://localhost:5173");
+// listener http:Listener complaintListen = new (8081, host = "http://localhost:8080");
 
 service /complaints on complaintListen {
     private final mongodb:Database ComplaintsDb;
+
+    @http:ResourceConfig {
+        cors: {
+            allowOrigins: ["http://localhost:8080/complaint"],
+            allowCredentials: true,
+            allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID" , "Access-Control-Allow-Origin"],
+            allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            exposeHeaders: ["Content-Length", "ETag"]
+        }
+    }
 
     function init() returns error? {
         self.ComplaintsDb = check mongoClient->getDatabase(DB_NAME);

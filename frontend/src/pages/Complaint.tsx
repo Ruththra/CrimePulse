@@ -95,11 +95,28 @@ const Complaint = () => {
 
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
+    // Prepare data for backend
+    try {
+      const formData = new FormData();
+      formData.append('category', complaintData.category);
+      formData.append('description', complaintData.description);
+      formData.append('date', complaintData.date);
+      formData.append('time', complaintData.time);
+      formData.append('location', complaintData.location);
+      if (complaintData.media) {
+        formData.append('media', complaintData.media);
+      }
+
+      const response = await fetch("http://localhost:8081/complaints/submit", {
+        method: 'POST',
+        body: formData,
+        mode: 'cors',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to submit complaint. Please try again.');
+      }
+
       setShowSuccess(true);
-      
       // Reset form
       setComplaintData({
         category: '',
@@ -109,7 +126,15 @@ const Complaint = () => {
         location: '',
         media: null
       });
-    }, 2000);
+    } catch (error:any) {
+      toast({
+        title: 'Submission Error',
+        description: error.message || 'An error occurred submitting your complaint.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
