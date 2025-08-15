@@ -479,16 +479,45 @@ service /complaints on complaintListen {
     }
 
     // // Retrieves a single complaint by its ID
-    // resource function get getComplaintsOf(string id) returns Complaint|error {
-    //     mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_NAME);
-    //     stream<Complaint, error?> result = check complaints->find({id: id});
-    //     Complaint[] found = check from Complaint c in result select c;
-    //     if found.length() == 1 {
-    //         return found[0];
-    //     } else {
-    //         return error("Complaint not found for id: " + id);
-    //     }
-    // }
+    resource function get getComplaintsOfID(http:Caller caller, http:Request req, string id) returns error? {
+        string[] collections = [
+            COLLECTION_ASSAULT,
+            COLLECTION_CYBERCRIME,
+            COLLECTION_MISSINGPERSON,
+            COLLECTION_THEFT,
+            COLLECTION_OTHER
+        ];
+        foreach string colName in collections {
+            mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
+            stream<Complaint, error?> result = check complaints->find({id: id});
+            Complaint[] found = check from Complaint c in result select c;
+            if found.length() == 1 {
+                Complaint c = found[0];
+                json complaintJson = {
+                    id: c.id,
+                    category: c.category,
+                    description: c.description,
+                    date: c.date,
+                    time: c.time,
+                    location: c.location
+                };
+                if c.mediaPath is string {
+                    map<json> withMedia = <map<json>> complaintJson;
+                    withMedia["mediaPath"] = c.mediaPath;
+                    complaintJson = <json>withMedia;
+                }
+                http:Response resp = new;
+                resp.statusCode = 200;
+                resp.setJsonPayload(complaintJson);
+                check caller->respond(resp);
+                return;
+            }
+        }
+        http:Response notFoundResp = new;
+        notFoundResp.statusCode = 404;
+        notFoundResp.setJsonPayload({"message": "Complaint not found for id: " + id});
+        check caller->respond(notFoundResp);
+    }
 }
 
 public type Complaint record {
