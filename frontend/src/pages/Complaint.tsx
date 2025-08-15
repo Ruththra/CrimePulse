@@ -24,11 +24,11 @@ const Complaint = () => {
   const { toast } = useToast();
 
   const categories = [
-    { value: 'theft', label: 'Theft' },
-    { value: 'assault', label: 'Assault' },
-    { value: 'cybercrime', label: 'Cybercrime' },
-    { value: 'missing', label: 'Missing Person' },
-    { value: 'other', label: 'Other' }
+    { value: 'Theft', label: 'Theft' },
+    { value: 'Assault', label: 'Assault' },
+    { value: 'CyberCrime', label: 'Cybercrime' },
+    { value: 'MissingPerson', label: 'Missing Person' },
+    { value: 'Other', label: 'Other' }
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
