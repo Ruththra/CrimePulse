@@ -287,6 +287,36 @@ service /auth on authListener {
             check caller->respond(resp);
             }
     }
+    resource function post logoutRegisteredUser(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+        foreach http:Cookie c in cookies {
+            if c.name == "reg_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+        http:Response resp = new;
+        if cookie is () {
+            resp.statusCode = 400;
+            resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
+            check caller->respond(resp);
+            return;
+        }
+        
+
+        http:Cookie expiredCookie = new (
+            name = "reg_user_id",
+            value = "",
+            path = "/",
+            httpOnly = true,
+            maxAge = 0 // instructs browser to delete immediately
+        );
+        resp.addCookie(expiredCookie);
+        resp.statusCode = 200;
+        resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
+        check caller->respond(resp);
+    }//Here could not able to delete predefined cookie
 
     resource function post loginRegisteredUser(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
