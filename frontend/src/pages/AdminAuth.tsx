@@ -5,22 +5,39 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
 import { Shield } from 'lucide-react';
+// Removed: import ReCAPTCHA from 'react-google-recaptcha';
+
+// Removed: const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY'; // Replace with your site key
 
 const AdminAuth = () => {
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
   });
+  // Removed: const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Removed: if (!recaptchaToken) { ... }
     // Mock admin authentication
     if (credentials.username === 'admin' && credentials.password === 'admin123') {
+      setShow2FA(true);
+    } else {
+      alert('Invalid credentials');
+    }
+  };
+
+  const handle2FASubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Mock 2FA code check
+    if (twoFACode === '123456') {
       localStorage.setItem('adminAuth', 'true');
       navigate('/admin/home');
     } else {
-      alert('Invalid credentials');
+      alert('Invalid 2FA code');
     }
   };
 
@@ -44,52 +61,77 @@ const AdminAuth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={credentials.username}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Enter admin username"
-                  className="bg-background/50 border-border"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={credentials.password}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter admin password"
-                  className="bg-background/50 border-border"
-                  required
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              >
-                Login to Admin Panel
-              </Button>
-            </form>
+            {!show2FA ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={credentials.username}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="Enter admin username"
+                    className="bg-background/50 border-border"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={credentials.password}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter admin password"
+                    className="bg-background/50 border-border"
+                    required
+                  />
+                </div>
+                {/* Removed reCAPTCHA */}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Login to Admin Panel
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handle2FASubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="2fa">Enter 2FA Code</Label>
+                  <Input
+                    id="2fa"
+                    type="text"
+                    value={twoFACode}
+                    onChange={(e) => setTwoFACode(e.target.value)}
+                    placeholder="Enter 2FA code"
+                    className="bg-background/50 border-border"
+                    required
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Verify 2FA
+                </Button>
+              </form>
+            )}
             <div className="mt-4 text-center">
-              <Button 
-                variant="ghost" 
+                            <Button 
+                              variant="ghost" 
                 onClick={() => navigate('/auth')}
                 className="text-muted-foreground hover:text-foreground"
               >
-                Back to User Login
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-export default AdminAuth;
+                              Back to User Login
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                );
+              };
+              
+              export default AdminAuth;
+              
