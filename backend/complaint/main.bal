@@ -6,37 +6,47 @@ import ballerina/uuid;
 import ballerina/lang.'string as string;
 import ballerinax/mongodb;
 
+
+configurable int PORT = ?;
+configurable string SERVER_URL = ?;
+configurable string FRONTEND_COMPLAINT_URL = ?;
+
+
 configurable string MONGO_URI = ?;
 configurable string DB_NAME = ?;
-configurable string COLLECTION_NAME = ?;
+configurable string COLLECTION_ASSAULT = ?;
+configurable string COLLECTION_CYBERCRIME = ?;
+configurable string COLLECTION_MISSINGPERSON = ?;
+configurable string COLLECTION_THEFT = ?;
+configurable string COLLECTION_OTHER = ?;
 
-// mongodb:Client mongodb = check new ({
-//     connection: MONGO_URI
-// });
+configurable string CLOUDINARY_CLOUD_NAME = ?;
+configurable string CLOUDINARY_API_KEY = ?;
+configurable string CLOUDINARY_API_SECRET = ?;
+configurable string CLOUDINARY_URL = ?;
+
+
 mongodb:Client mongoClient = check new ({
     connection: MONGO_URI
 });
-//_________________________________________________________________________________
 
-// The service-level CORS config applies globally to each `resource`.
 http:CorsConfig corsConfig = {
     allowCredentials: true,
     allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID", "Access-Control-Allow-Origin"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowOrigins: ["http://localhost:8080/complaint"],
+    allowOrigins: [FRONTEND_COMPLAINT_URL],
     exposeHeaders: ["Content-Length", "ETag"]
 };
 
 
-listener http:Listener complaintListen = new (8081);
-// listener http:Listener complaintListen = new (8081, host = "http://localhost:8080");
+listener http:Listener complaintListen = new (PORT);
 
 service /complaints on complaintListen {
     private final mongodb:Database ComplaintsDb;
 
     @http:ResourceConfig {
         cors: {
-            allowOrigins: ["http://localhost:8080/complaint"],
+            allowOrigins: [FRONTEND_COMPLAINT_URL],
             allowCredentials: true,
             allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID" , "Access-Control-Allow-Origin"],
             allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -48,14 +58,59 @@ service /complaints on complaintListen {
         self.ComplaintsDb = check mongoClient->getDatabase(DB_NAME);
     }
 
+
+    resource function get hello() returns string {
+        return "Hello from Ballerina backend!";
+    }
+
+
+
+
+    // resource function post upload(http:Caller caller, http:Request req) returns error? {
+    //     mime:Entity|error fileEntity = req.getEntity("file");
+    //     if fileEntity is mime:Entity {
+    //         // Read file as byte array
+    //         byte[] fileBytes = check fileEntity.getByteArray();
+
+    //         // Cloudinary API details
+    //         string cloudName = CLOUDINARY_CLOUD_NAME;
+    //         string apiKey = CLOUDINARY_API_KEY;
+    //         string apiSecret = CLOUDINARY_API_SECRET;
+    //         string apiUrl = string `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+
+    //         // Prepare request
+    //         http:Client cloudinaryClient = check new (apiUrl);
+
+    //         // Create form-data
+    //         mime:Entity filePart = new;
+    //         check filePart.setByteArray(fileBytes, contentType = "image/jpeg");
+
+    //         http:Request uploadReq = new;
+    //         uploadReq.setBody(filePart);
+    //         uploadReq.addFormField("file", "data:image/jpeg;base64," + base64Encode(fileBytes));
+    //         uploadReq.addFormField("upload_preset", "<your-upload-preset>");
+
+    //         // Send POST request to Cloudinary
+    //         http:Response cloudResp = check cloudinaryClient->post("", uploadReq);
+    //         string respJson = check cloudResp.getText();
+
+    //         // Send Cloudinary response back to client
+    //         check caller->respond(respJson);
+    //     } else {
+    //         check caller->respond("No file uploaded");
+    //     }
+    // }
+
+    // function base64Encode(byte[] bytes) returns string {
+    //     return check base64Encode(bytes);
+    // }
+
     resource function post submit(http:Caller caller, http:Request req) returns error? {
 
         string id = uuid:createType4AsString();
         string mediaPath = "";// Initialize mediaPath to an empty string.
 
 
-        // Attempt to extract the body parts.  If the request does not
-        // contain a multipart payload this returns a ParserError.
         mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
         mime:Entity[] bodyParts = [];
         if bodyPartsResult is mime:Entity[] {
@@ -63,8 +118,6 @@ service /complaints on complaintListen {
         } else {
             http:Response errorResp = new;
             errorResp.statusCode = 400;
-            // Provide a generic message when the incoming payload is not
-            // multipart.  The client can interpret this as a bad request.
             errorResp.setJsonPayload({
                 message: "Invalid multipart body"
             });
@@ -72,34 +125,26 @@ service /complaints on complaintListen {
             // return;
         }
 
-        // Variables to hold the parsed form fields.  Empty values
-        // indicate that a field has not been provided.
         string category = "";
         string description = "";
         string incidentDate = "";
         string incidentTime = "";
         string location = "";
-        // Track whether a media part was present.  Use a separate flag
-        // because a zero-length byte array could be a valid file.
         boolean mediaPresent = false;
         byte[] mediaBytes = [];
         string mediaContentType = "";
         string mediaOriginalFileName = "";
 
-        // Iterate through the body parts.  Each part has an associated
-        // Content-Disposition header with the form field name and
-        // optionally a filename for file uploads.
+
         foreach mime:Entity part in bodyParts {
             mime:ContentDisposition? cd = part.getContentDisposition();
             string? partName = cd is mime:ContentDisposition ? cd.name : ();
-            // Skip parts without a name; these are not expected from the
-            // client form.  Unknown names are also ignored.
+
             if partName is string {
                 match partName {
                     "category" => {
                         var value = part.getText();
                         if value is string {
-                            // Trim whitespace to avoid accidental spaces.
                             category = value.trim();
                         }
                     }
@@ -127,14 +172,11 @@ service /complaints on complaintListen {
                             location = value;
                         }
                     }
-                    // The frontend includes a reCAPTCHA checkbox.  Since
-                    // the check happens on the client side, simply parse
-                    // and ignore this field here.
+
                     "recaptcha" => {
                         _ = check part.getText();
                     }
-                    // The file input is named "media".  Extract its
-                    // binary content, content type and original filename.
+
                     "media" => {
                         var bytesResult = part.getByteArray();
                         if bytesResult is byte[] {
@@ -143,7 +185,6 @@ service /complaints on complaintListen {
                         }
                         var ct = part.getContentType();
                         if ct is string {
-                            // The content type is already a string (e.g. image/jpeg).
                             mediaContentType = ct;
                         }
                         mediaOriginalFileName = cd is mime:ContentDisposition ? cd.fileName : "";
@@ -156,18 +197,14 @@ service /complaints on complaintListen {
             }
         }
 
-        // Build a map of validation errors keyed by form field name.
-        // An empty map indicates that all validations have passed.
+
         map<string> errors = {};
 
-        // Category is mandatory.  The frontend ensures the value is one
-        // of several predefined options, so presence is the only check.
+
         if category == "" {
             errors["category"] = "Please select a category";
         }
 
-        // Description must be present and at least 20 characters long
-        // (after trimming leading/trailing whitespace).
         string trimmedDesc = description.trim();
         if trimmedDesc == "" {
             errors["description"] = "Description is required";
@@ -178,10 +215,7 @@ service /complaints on complaintListen {
             }
         }
 
-        // Date and time are required fields.  The frontend restricts
-        // `date` to today or earlier via the `max` attribute, but here
-        // we simply check for presence.  Additional parsing could be
-        // added if needed (e.g. to reject future dates).
+
         if incidentDate == "" {
             errors["date"] = "Date is required";
         }
@@ -189,19 +223,15 @@ service /complaints on complaintListen {
             errors["time"] = "Time is required";
         }
 
-        // Location cannot be empty when trimmed.
         if location.trim() == "" {
             errors["location"] = "Location is required";
         }
 
-        // If a media file was uploaded, enforce size and type constraints.
         if mediaPresent {
-            // File size must not exceed 10 MB (10 * 1024 * 1024 bytes).
             int sizeInBytes = mediaBytes.length();
             if sizeInBytes > 10 * 1024 * 1024 {
                 errors["media"] = "File size must be less than 10MB";
             }
-            // Acceptable MIME types: JPEG, PNG, MP4 and MOV (QuickTime).
             if mediaContentType != "" {
                 boolean allowed = mediaContentType == "image/jpeg" ||
                                  mediaContentType == "image/png" ||
@@ -213,34 +243,25 @@ service /complaints on complaintListen {
             }
         }
 
-        // If any validation errors were recorded, respond with a 400
-        // status and the error map.  The client can use this map to
-        // display per-field error messages.
+
         if errors.length() > 0 {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({
                 errors: errors
             });
-            // return resp;
         check caller->respond(resp);
 
         }
 
-        // If a media file was provided and validated, persist it in the
-        // `uploads` directory.  The directory is created on demand.
+
         if mediaPresent {
             string uploadDir = "./uploads";//Online storage tobe configured
-            // Check whether the directory exists.  If it does not
-            // exist, create it (recursively) before writing the file.
+
             boolean dirExists = check file:test(uploadDir, file:EXISTS);
             if !dirExists {
-                // Create any missing parent directories as well.
                 check file:createDir(uploadDir, file:RECURSIVE);
             }
-            // Determine the file extension from the original filename
-            // (including the leading dot).  If no dot is found, the
-            // extension is left empty.
             string extension = "";
             if mediaOriginalFileName != "" {
                 int lastDot = string:lastIndexOf(mediaOriginalFileName, ".") ?: 0;
@@ -248,38 +269,28 @@ service /complaints on complaintListen {
                     extension = string:substring(mediaOriginalFileName, lastDot, string:length(mediaOriginalFileName));
                 }
             }
-            // Construct a unique filename using a UUID with hyphens
-            // removed.  This mitigates collisions even under high
-            // concurrency.  Note that hyphens are removed to produce
-            // shorter filenames.
+
             string fileName = id + extension;
             string filePath = uploadDir + "/" + fileName;
             mediaPath = filePath; // Store the path for the Complaint record.
-            // Write the byte array to disk.  Errors propagate to
-            // the resource's return type through `check`.
             check io:fileWriteBytes(filePath, mediaBytes);
         }
 
-        // Generate a concise reference number.  The React frontend
-        // extracts the last six digits of the current timestamp to
-        // produce a code like `CP-123456`.  Here we generate a UUID,
-        // strip the hyphens, and take the last six characters to
-        // achieve similar uniqueness.
-        //________________________________________________
+
         string rawUuid = uuid:createType4AsString();
         int len = string:length(rawUuid);
         string suffix = len >= 6 ? string:substring(rawUuid, len - 6, len) : rawUuid;
         string reference = "CP-" + suffix;
 
-        // Construct the success response with status 201 (Created).
+
         http:Response successResp = new;
         successResp.statusCode = 201;
         successResp.setJsonPayload({
             reference: reference,
             message: "Complaint submitted successfully"
         });
-        //________________________________________________________
-        // Create a Complaint record to store in the database.
+
+
         Complaint complaint = {
             id: id,
             category: category,
@@ -289,13 +300,223 @@ service /complaints on complaintListen {
             location: location,
             mediaPath: mediaPresent ? mediaPath : ()
         };
-    mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_NAME);
-    check complaints->insertOne(complaint);
-    http:Response resp = new;
-    resp.setPayload({message: "Complaint received and saved to DB"});
-    check caller->respond(resp);
+
+    if category == "Assault"{
+        io:println("inside assault");
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_ASSAULT);
+        check complaints->insertOne(complaint);
+        http:Response resp = new;
+        resp.setPayload({message: "Complaint received and saved to DB"});
+        check caller->respond(resp);
+    }
+    else if category == "CyberCrime" {
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_CYBERCRIME);
+        check complaints->insertOne(complaint);
+        http:Response resp = new;
+        resp.setPayload({message: "Complaint received and saved to DB"});
+        check caller->respond(resp);
+    }
+    else if category == "MissingPerson" {
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_MISSINGPERSON);
+        check complaints->insertOne(complaint);
+        http:Response resp = new;
+        resp.setPayload({message: "Complaint received and saved to DB"});
+        check caller->respond(resp);
+    }
+    else if category == "Theft" {
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_THEFT);
+        check complaints->insertOne(complaint);
+        http:Response resp = new;
+        resp.setPayload({message: "Complaint received and saved to DB"});
+        check caller->respond(resp);
+    }
+    else {
+        io:println("Inside Other");
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_OTHER);
+        check complaints->insertOne(complaint);
+        http:Response resp = new;
+        resp.setPayload({message: "Complaint received and saved to DB"});
+        check caller->respond(resp);
+    }
     
-        // return successResp;
+    
+}
+
+    // Retrieves all complaints in the database
+    resource function get getAllComplaints(http:Caller caller, http:Request req) returns error? {
+        io:println("Retrieving all complaints");
+        Complaint[] allComplaints = [];
+        string[] collections = [
+            COLLECTION_ASSAULT,
+            COLLECTION_CYBERCRIME,
+            COLLECTION_MISSINGPERSON,
+            COLLECTION_THEFT,
+            COLLECTION_OTHER
+        ];
+        foreach string colName in collections {
+            mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
+            stream<Complaint, error?> result = check complaints->find();
+            Complaint[] tempList = check from Complaint c in result select c;
+            // Merge into allComplaints
+            allComplaints = [...allComplaints, ...tempList];
+        }
+
+        json[] allComplaintsJson = [];
+
+        foreach Complaint c in allComplaints{
+            json complaintJson = {
+                id: c.id,
+                category: c.category,
+                description: c.description,
+                date: c.date,
+                time: c.time,
+                location: c.location
+            };
+            if c.mediaPath is string {
+                // complaintJson["mediaPath"] = c.mediaPath;
+                map<json> withMedia = <map<json>> complaintJson;
+                withMedia["mediaPath"] = c.mediaPath;
+                complaintJson = <json>withMedia;
+            }
+            allComplaintsJson.push(complaintJson);
+        }
+        http:Response resp = new;
+        if allComplaints.length() == 0 {
+            resp.statusCode = 404;
+            resp.setJsonPayload({message: "No complaints found"});
+        } else {
+            resp.statusCode = 200;
+            resp.setJsonPayload(allComplaintsJson);
+        }
+        check caller->respond(resp);
+    }
+
+    // Retrieves complaints by category
+    resource function get getComplaintsByCategory(http:Caller caller, http:Request req) returns error? {
+        string? category = req.getQueryParamValue("category");
+        if category is () || category.trim() == "" {
+            http:Response resp = new;
+            resp.statusCode = 400;
+            resp.setJsonPayload({ "error": "Missing or empty 'category' query parameter" });
+            check caller->respond(resp);
+            // return [];
+        }
+
+        string collectionName;
+        match category {
+            "Assault" => {collectionName = COLLECTION_ASSAULT;}
+            "CyberCrime" => {collectionName = COLLECTION_CYBERCRIME;}
+            "MissingPerson" => {collectionName = COLLECTION_MISSINGPERSON;}
+            "Theft" => {collectionName = COLLECTION_THEFT;}
+            _ => {collectionName = COLLECTION_OTHER;}
+        }
+
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(collectionName);
+        stream<Complaint, error?> result = check complaints->find();
+        Complaint[] found = check from Complaint c in result select c;
+        json[] foundJson = [];
+        foreach Complaint c in found {
+            json complaintJson = {
+                id: c.id,
+                category: c.category,
+                description: c.description,
+                date: c.date,
+                time: c.time,
+                location: c.location
+            };
+            if c.mediaPath is string {
+                // complaintJson["mediaPath"] = c.mediaPath;
+                map<json> withMedia = <map<json>> complaintJson;
+                withMedia["mediaPath"] = c.mediaPath;
+                complaintJson = <json>withMedia;
+            }
+            foundJson.push(complaintJson);
+        }
+        http:Response resp = new;
+        if found.length() == 0 {
+            resp.statusCode = 404;
+            resp.setJsonPayload({message: "No complaints found"});
+        } else {
+            resp.statusCode = 200;
+            resp.setJsonPayload(foundJson);
+        }
+        check caller->respond(resp);
+    }
+
+    resource function get getComplaintAssault(http:Caller caller, http:Request req) returns error?{
+        io:println("Retrieving complaints for category: Assault");
+        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_ASSAULT);
+        stream<Complaint, error?> result = check complaints->find();
+        Complaint[] found = check from Complaint c in result select c;
+        json[] foundJson = [];
+        foreach Complaint c in found {
+            json complaintJson = {
+                id: c.id,
+                category: c.category,
+                description: c.description,
+                date: c.date,
+                time: c.time,
+                location: c.location
+            };
+            if c.mediaPath is string {
+                // complaintJson["mediaPath"] = c.mediaPath;
+                map<json> withMedia = <map<json>> complaintJson;
+                withMedia["mediaPath"] = c.mediaPath;
+                complaintJson = <json>withMedia;
+            }
+            foundJson.push(complaintJson);
+        }
+        http:Response resp = new;
+        if found.length() == 0 {
+            resp.statusCode = 404;
+            resp.setJsonPayload({message: "No complaints found"});
+        } else {
+            resp.statusCode = 200;
+            resp.setJsonPayload(foundJson);
+        }
+        check caller->respond(resp);
+        
+    }
+
+    // // Retrieves a single complaint by its ID
+    resource function get getComplaintsOfID(http:Caller caller, http:Request req, string id) returns error? {
+        string[] collections = [
+            COLLECTION_ASSAULT,
+            COLLECTION_CYBERCRIME,
+            COLLECTION_MISSINGPERSON,
+            COLLECTION_THEFT,
+            COLLECTION_OTHER
+        ];
+        foreach string colName in collections {
+            mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
+            stream<Complaint, error?> result = check complaints->find({id: id});
+            Complaint[] found = check from Complaint c in result select c;
+            if found.length() == 1 {
+                Complaint c = found[0];
+                json complaintJson = {
+                    id: c.id,
+                    category: c.category,
+                    description: c.description,
+                    date: c.date,
+                    time: c.time,
+                    location: c.location
+                };
+                if c.mediaPath is string {
+                    map<json> withMedia = <map<json>> complaintJson;
+                    withMedia["mediaPath"] = c.mediaPath;
+                    complaintJson = <json>withMedia;
+                }
+                http:Response resp = new;
+                resp.statusCode = 200;
+                resp.setJsonPayload(complaintJson);
+                check caller->respond(resp);
+                return;
+            }
+        }
+        http:Response notFoundResp = new;
+        notFoundResp.statusCode = 404;
+        notFoundResp.setJsonPayload({"message": "Complaint not found for id: " + id});
+        check caller->respond(notFoundResp);
     }
 }
 
@@ -308,6 +529,25 @@ public type Complaint record {
     string location;
     string? mediaPath; // optional
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
