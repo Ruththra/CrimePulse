@@ -6,7 +6,8 @@ import ballerina/uuid;
 import ballerina/lang.'string as string;
 import ballerinax/mongodb;
 import ballerina/lang.regexp;
-
+import ballerina/crypto;
+import ballerina/lang.'int as int;
 
 configurable int PORT = ?;
 configurable string SERVER_URL = ?;
@@ -243,11 +244,13 @@ service /auth on authListener {
 
                 string id = uuid:createType4AsString();
 
+                // Hash the password before saving
+                string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
                 // Create user record
                 RegisteredUser newUser = {
                     id: id,
                     username: username,
-                    password: password, 
+                    password: hashedPassword,
                     email: email,
                     phone: phone,
                     icNumber: icNumber
@@ -338,6 +341,15 @@ function validateSriLankanIC(string ic) returns boolean {
     return false;
 }
 
+
+// Helper function to convert byte array to hex string
+function bytesToHex(byte[] data) returns string {
+    string hexStr = "";
+    foreach byte b in data {
+        hexStr += int:toHexString(b); // 2-digit uppercase hex
+    }
+    return hexStr;
+}
 
 type RegisteredUser record {
     string id;
