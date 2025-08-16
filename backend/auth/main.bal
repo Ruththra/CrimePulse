@@ -413,9 +413,9 @@ service /auth on authListener {
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie  = ();
 
-        // Look for the cookie named "unreg_user_id"
+        // Look for the cookie named "admin_user_id"
         foreach http:Cookie c in cookies {
-            if c.name == "reg_user_id" {
+            if c.name == "admin_user_id" {
                 cookie = c;
                 break;
             }
@@ -549,7 +549,7 @@ service /auth on authListener {
                 check regUsersCol->insertOne(newUser);
 
                 http:Cookie newCookie = new (
-                    name = "reg_user_id",
+                    name = "admin_user_id",
                     value = id,
                     path = "/",
                     httpOnly = true,
@@ -576,6 +576,96 @@ service /auth on authListener {
             resp.setJsonPayload({ message: "You already have an account" });
             check caller->respond(resp);
             }
+    }
+
+    resource function post loginAdmin(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? loginCookie = ();
+        foreach http:Cookie c in cookies {
+            if c.name == "admin_user_id" {
+                loginCookie = c;
+                break;
+            }
+        }
+        if loginCookie is () {
+
+            json|error payload = req.getJsonPayload();
+            if payload is error {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Invalid JSON payload" });
+                check caller->respond(resp); return;
+            }
+
+            string username = "";
+            string email = "";
+            string password = "";
+            if payload is map<json> {
+                if payload.hasKey("username") && payload["username"] is string {
+                    username = (<string>payload["username"]).trim();
+                }
+                if payload.hasKey("email") && payload["email"] is string {
+                    email = (<string>payload["email"]).trim();
+                }
+                if payload.hasKey("password") && payload["password"] is string {
+                    password = <string>payload["password"];
+                }
+            } else {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Invalid JSON object" });
+                check caller->respond(resp); return;
+            }
+
+            if password == "" || (username == "" || email == "") {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
+                check caller->respond(resp); return;
+            }
+            
+            // Hash password
+            string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
+            
+            // Query by username or email
+            mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ username: username });
+            RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
+
+            if matches.length() == 0 {
+                http:Response resp = new;
+                resp.statusCode = 401;
+                resp.setJsonPayload({ message: "User not found" });
+                check caller->respond(resp); return;
+            }
+            RegisteredUser user = matches[0];
+            if user.password != hashedPassword && user.email != email {
+                http:Response resp = new;
+                resp.statusCode = 401;
+                resp.setJsonPayload({ message: "Incorrect password or email" });
+                check caller->respond(resp); return;
+            }
+            // Create login cookie
+            http:Cookie loginCookieNew = new (
+                name = "admin_user_id",
+                value = user.id,
+                path = "/",
+                httpOnly = true,
+                maxAge = 60 * 60 * 24 * 365 // 1 year
+            );
+            http:Response resp = new;
+            resp.addCookie(loginCookieNew);
+            resp.statusCode = 200;
+            resp.setJsonPayload({ message: "Login successful", id: user.id });
+            check caller->respond(resp);
+
+        } 
+        else {
+            http:Response resp = new;
+            resp.statusCode = 403;
+            resp.setJsonPayload({ message: "You are already logged in" });
+            check caller->respond(resp); return;
+        }
     }
 
 
