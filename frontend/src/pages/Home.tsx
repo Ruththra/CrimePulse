@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { FileText, Shield, Users, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import NewsTicker from '@/components/NewsTicker';
-import HeatMap from '@/components/ui/HeatMap';
-import crimeBackground from '@/assets/crime-background.jpg';
+import { Button } from '../components/ui/button';
+import NewsTicker from '../components/NewsTicker';
+import HeatMap from '../components/HeatMap';
+import crimeBackground from '../assets/crime-background.jpg';
 
 const Home = () => {
   return (

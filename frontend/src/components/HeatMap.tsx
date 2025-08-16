@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MapPin, TrendingUp, AlertCircle } from 'lucide-react';
-import sriLankaHeatmap from '@/assets/srilanka-map.png';
+import sriLankaHeatmap from '../assets/srilanka-map.png';
 
 const HeatMap = () => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);

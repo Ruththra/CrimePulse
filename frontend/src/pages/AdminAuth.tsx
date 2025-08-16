@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Label } from '../components/ui/label';
 import { Shield } from 'lucide-react';
 // Removed: import ReCAPTCHA from 'react-google-recaptcha';
 
@@ -120,7 +120,9 @@ const AdminAuth = () => {
             <div className="mt-4 text-center">
                             <Button 
                               variant="ghost" 
-                              onClick={() => navigate('/auth')}>
+                onClick={() => navigate('/auth')}
+                className="text-muted-foreground hover:text-foreground"
+              >
                               Back to User Login
                             </Button>
                           </div>
