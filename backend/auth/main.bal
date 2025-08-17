@@ -297,6 +297,7 @@ service /auth on authListener {
             }
         }
         http:Response resp = new;
+        // Check if user is actually logged in
         if cookie is () {
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
@@ -304,15 +305,22 @@ service /auth on authListener {
             return;
         }
         
-
-        http:Cookie expiredCookie = new (
-            name = "reg_user_id",
-            value = "",
-            path = "/",
-            httpOnly = true,
-            maxAge = 0 // instructs browser to delete immediately
-        );
-        resp.addCookie(expiredCookie);
+        // Remove the cookie by setting its maxAge to 0
+        // We create an expired cookie with the same attributes as the original
+        // to ensure the browser properly removes it
+        
+        // http:Cookie expiredCookie = new (
+        //     name = "reg_user_id",
+        //     value = "",
+        //     path = "/",
+        //     httpOnly = true,
+        //     maxAge = 0 // Instructs browser to delete immediately
+        // );
+        
+        // Also add a header to remove the cookie, which provides an additional way
+        // for the browser to remove the cookie
+        resp.setHeader("Set-Cookie", "reg_user_id=; Path=/; HttpOnly; Max-Age=0");
+        // resp.addCookie(expiredCookie);
         resp.statusCode = 200;
         resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
         check caller->respond(resp);
