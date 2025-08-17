@@ -32,7 +32,7 @@ const Auth = () => {
     return /^(?:\+94|0)?[1-9][0-9]{8}$/.test(phone);
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: {[key: string]: string} = {};
 
@@ -51,14 +51,38 @@ const Auth = () => {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      toast({
-        title: "Sign In Successful",
-        description: "Welcome back to Crime Pulse!",
-      });
+      try {
+        const response = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(signInData)
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast({
+            variant: "destructive",
+            title: "Sign In Failed",
+            description: result.message || 'Invalid credentials or server error.',
+          });
+        } else {
+          toast({
+            title: "Sign In Successful",
+            description: result.message || 'Welcome back to Crime Pulse!',
+          });
+          // Redirect logic here if needed
+        }
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Sign In Error",
+          description: err.message || 'An error occurred during signin.',
+        });
+      }
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: {[key: string]: string} = {};
 
@@ -91,10 +115,36 @@ const Auth = () => {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to Crime Pulse! You can now report crimes.",
-      });
+      try {
+        const sendData = { ...registerData };
+        // delete sendData.confirmPassword;
+        const response = await fetch('http://localhost:8082/auth/createRegisteredUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sendData)
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast({
+            variant: "destructive",
+            title: "Registration Failed",
+            description: result.message || 'Registration failed due to an error.',
+          });
+        } else {
+          toast({
+            title: "Registration Successful",
+            description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
+          });
+          // Redirect logic here if needed
+        }
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Registration Error",
+          description: err.message || 'An error occurred during registration.',
+        });
+      }
     }
   };
 
