@@ -319,6 +319,8 @@ service /auth on authListener {
             );
             
             http:Response resp = new;
+            // Remove any existing unregistered user cookie
+            resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
             resp.addCookie(newCookie);
             resp.statusCode = 201;
             resp.setJsonPayload({ message: "User registered successfully", id: id });
@@ -478,6 +480,8 @@ service /auth on authListener {
                 maxAge = 60 * 60 * 24 * 365 // 1 year
             );
             http:Response resp = new;
+            // Remove any existing unregistered user cookie
+            resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
             resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
             resp.setJsonPayload({ message: "Login successful", id: user.id });
@@ -679,6 +683,8 @@ service /auth on authListener {
                 );
 
                 http:Response resp = new;
+                // Remove any existing unregistered user cookie
+                resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
                 resp.addCookie(newCookie);
                 resp.statusCode = 201;
                 resp.setJsonPayload({ message: "User registered successfully", id: id });
@@ -839,6 +845,8 @@ service /auth on authListener {
                 maxAge = 60 * 60 * 24 * 365 // 1 year
             );
             http:Response resp = new;
+            // Remove any existing unregistered user cookie
+            resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
             resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
             resp.setJsonPayload({ message: "Login successful", id: user.id });
@@ -939,3 +947,4 @@ function addCorsHeaders(http:Response resp) {
 
 //ToDos
 //OTP verification for email must to be full filled
+//2FA for login
