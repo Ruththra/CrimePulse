@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Calendar, MapPin, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { useToast } from '../hooks/use-toast';
 import crimeBackground from '../assets/crime-background.jpg';
 
@@ -27,6 +27,25 @@ const Complaint = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        })
+    });
+  }, []);
 
   const categories = [
     { value: 'Theft', label: 'Theft' },
@@ -122,10 +141,18 @@ const Complaint = () => {
         method: 'POST',
         body: formData,
         mode: 'cors',
+        credentials: 'include'
       });
+      
       if (!response.ok) {
         throw new Error('Failed to submit complaint. Please try again.');
       }
+      // Handle success response
+      toast({
+        title: 'Complaint Submitted',
+        description: 'Your complaint has been successfully submitted.',
+        variant: 'success'
+      })
 
       setShowSuccess(true);
       // Reset form
@@ -361,6 +388,9 @@ const Complaint = () => {
               <CheckCircle className="h-6 w-6 mr-2" />
               Complaint Submitted Successfully
             </DialogTitle>
+            <DialogDescription>
+              Your complaint has been successfully submitted to the authorities.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">
@@ -372,8 +402,8 @@ const Complaint = () => {
             <p className="text-sm text-muted-foreground">
               You will receive updates via SMS and email. Keep this reference number for future inquiries.
             </p>
-            <Button 
-              onClick={() => setShowSuccess(false)} 
+            <Button
+              onClick={() => setShowSuccess(false)}
               className="btn-crime w-full"
             >
               Continue
