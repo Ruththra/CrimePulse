@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,20 @@ import crimeBackground from '@/assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch('http://localhost:8082/auth/loginRegisteredUser', { method: 'OPTIONS' })
+      .then(res => {
+        if (res.ok) {
+          console.log('✅ Backend connected');
+        } else {
+          console.log('❌ Backend not connected (response not ok)');
+        }
+      })
+      .catch(err => {
+        console.log('❌ Backend not connected:', err.message);
+      });
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
@@ -52,7 +66,7 @@ const Auth = () => {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        const response = await fetch('/api/auth/signin', {
+        const response = await fetch('http://localhost:8082/auth/loginRegisteredUser', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(signInData)

@@ -9,6 +9,23 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        sourcemap: true,
+        sourcemapExcludeSources: false,
+      },
+    },
+  },
+  esbuild: {
+    sourcemap: true,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      sourcemap: true,
+    },
+  },
   plugins: [
     react(),
     mode === 'development' &&
