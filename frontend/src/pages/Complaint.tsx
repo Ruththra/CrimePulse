@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Calendar, MapPin, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,6 +22,25 @@ const Complaint = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        })
+    });
+  }, []);
 
   const categories = [
     { value: 'Theft', label: 'Theft' },
@@ -111,6 +130,7 @@ const Complaint = () => {
         method: 'POST',
         body: formData,
         mode: 'cors',
+        credentials: 'include'
       });
       
       if (!response.ok) {

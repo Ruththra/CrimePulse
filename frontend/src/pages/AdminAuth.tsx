@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -20,6 +20,25 @@ const AdminAuth = () => {
   const [show2FA, setShow2FA] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

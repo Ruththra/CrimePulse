@@ -12,6 +12,7 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check backend connectivity
     fetch('http://localhost:8082/auth', { method: 'OPTIONS' })
       .then(res => {
         if (res.ok) {
@@ -23,6 +24,23 @@ const Auth = () => {
       .catch(err => {
         console.log('❌ Backend not connected:', err.message);
       });
+    
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        })
+    });
   }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
