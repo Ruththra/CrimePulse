@@ -1,5 +1,5 @@
-// <reference types="vite/client" />
-// <reference types="@types/google.maps" />
+/// <reference types="vite/client" />
+/// <reference types="@types/google.maps" />
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { TrendingUp } from 'lucide-react';
