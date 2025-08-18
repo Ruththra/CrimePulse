@@ -1,7 +1,7 @@
 import ballerina/http;
 // import ballerina/mime;
 // import ballerina/file;
-// import ballerina/io;
+import ballerina/io;
 import ballerina/uuid;
 import ballerina/lang.'string as string;
 import ballerinax/mongodb;
@@ -27,6 +27,15 @@ mongodb:Client mongoClient = check new ({
 listener http:Listener authListener = new (PORT);
 
 service /auth on authListener {
+
+    resource function options [string... path] (http:Caller caller, http:Request req) returns error? {
+        http:Response resp = new;
+        addCorsHeaders(resp);
+        resp.statusCode = 204;
+        resp.setPayload("");
+        check caller->respond(resp);
+    }
+
     private final mongodb:Database accountsDb;
 
     function init() returns error? {
@@ -114,12 +123,14 @@ service /auth on authListener {
         }
 
         // Send only ONE response
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
         check caller->respond(resp);
         
     }
 
     resource function post createRegisteredUser(http:Caller caller, http:Request req) returns error? {
-
+        io:println("inside registered user...");
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie  = ();
 
@@ -138,6 +149,7 @@ service /auth on authListener {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "Invalid JSON payload" });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             return;
             }
@@ -176,6 +188,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "All fields (username, password, email, phone, icNumber) are required" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -185,6 +198,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Password must be at least 8 characters including uppercase, lowercase, digit and special character" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -194,6 +208,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Invalid email format" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -204,6 +219,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Email verification failed" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -213,6 +229,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Invalid Sri Lankan IC number format" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -227,6 +244,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 409;
                     resp.setJsonPayload({ message: "Username already exists" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -238,6 +256,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 409;
                     resp.setJsonPayload({ message: "Email already registered" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -255,8 +274,9 @@ service /auth on authListener {
                     phone: phone,
                     icNumber: icNumber
                 };
-
+                io:println("Inserting new user: ", newUser);
                 check regUsersCol->insertOne(newUser);
+                io:println("User inserted successfully");
 
                 http:Cookie newCookie = new (
                     name = "reg_user_id",
@@ -270,12 +290,14 @@ service /auth on authListener {
                 resp.addCookie(newCookie);
                 resp.statusCode = 201;
                 resp.setJsonPayload({ message: "User registered successfully", id: id });
+                addCorsHeaders(resp);
                 check caller->respond(resp);
 
             } else {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON payload structure" });
+                addCorsHeaders(resp);
                 check caller->respond(resp);
             }
             
@@ -284,6 +306,7 @@ service /auth on authListener {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "You already have an account" });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             }
     }
@@ -301,6 +324,7 @@ service /auth on authListener {
         if cookie is () {
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             return;
         }
@@ -323,6 +347,7 @@ service /auth on authListener {
         // resp.addCookie(expiredCookie);
         resp.statusCode = 200;
         resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
+        addCorsHeaders(resp);
         check caller->respond(resp);
     }
 
@@ -342,6 +367,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON payload" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
 
@@ -362,6 +388,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON object" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
 
@@ -369,6 +396,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             
@@ -384,6 +412,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 401;
                 resp.setJsonPayload({ message: "User not found" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             RegisteredUser user = matches[0];
@@ -391,6 +420,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 401;
                 resp.setJsonPayload({ message: "Incorrect password or email" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             // Create login cookie
@@ -405,13 +435,15 @@ service /auth on authListener {
             resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
             resp.setJsonPayload({ message: "Login successful", id: user.id });
+            addCorsHeaders(resp);
             check caller->respond(resp);
 
-        } 
+        }
         else {
             http:Response resp = new;
             resp.statusCode = 403;
             resp.setJsonPayload({ message: "You are already logged in" });
+            addCorsHeaders(resp);
             check caller->respond(resp); return;
         }
     }
@@ -436,6 +468,7 @@ service /auth on authListener {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "Invalid JSON payload" });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             return;
             }
@@ -474,6 +507,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "All fields (username, password, email, phone, icNumber) are required" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -483,6 +517,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Password must be at least 8 characters including uppercase, lowercase, digit and special character" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -492,6 +527,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Invalid email format" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -502,6 +538,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Email verification failed" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -511,6 +548,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 400;
                     resp.setJsonPayload({ message: "Invalid Sri Lankan IC number format" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -525,6 +563,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 409;
                     resp.setJsonPayload({ message: "Username already exists" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -536,6 +575,7 @@ service /auth on authListener {
                     http:Response resp = new;
                     resp.statusCode = 409;
                     resp.setJsonPayload({ message: "Email already registered" });
+                    addCorsHeaders(resp);
                     check caller->respond(resp);
                     return;
                 }
@@ -568,12 +608,14 @@ service /auth on authListener {
                 resp.addCookie(newCookie);
                 resp.statusCode = 201;
                 resp.setJsonPayload({ message: "User registered successfully", id: id });
+                addCorsHeaders(resp);
                 check caller->respond(resp);
 
             } else {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON payload structure" });
+                addCorsHeaders(resp);
                 check caller->respond(resp);
             }
             
@@ -582,6 +624,7 @@ service /auth on authListener {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({ message: "You already have an account" });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             }
     }
@@ -600,6 +643,7 @@ service /auth on authListener {
     if cookie is () {
         resp.statusCode = 400;
         resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
+        addCorsHeaders(resp);
         check caller->respond(resp);
         return;
     }
@@ -622,6 +666,7 @@ service /auth on authListener {
     // resp.addCookie(expiredCookie);
     resp.statusCode = 200;
     resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
+    addCorsHeaders(resp);
     check caller->respond(resp);
     }
 
@@ -641,6 +686,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON payload" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
 
@@ -661,6 +707,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Invalid JSON object" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
 
@@ -668,6 +715,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             
@@ -683,6 +731,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 401;
                 resp.setJsonPayload({ message: "User not found" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             RegisteredUser user = matches[0];
@@ -690,6 +739,7 @@ service /auth on authListener {
                 http:Response resp = new;
                 resp.statusCode = 401;
                 resp.setJsonPayload({ message: "Incorrect password or email" });
+                addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
             // Create login cookie
@@ -704,13 +754,15 @@ service /auth on authListener {
             resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
             resp.setJsonPayload({ message: "Login successful", id: user.id });
+            addCorsHeaders(resp);
             check caller->respond(resp);
 
-        } 
+        }
         else {
             http:Response resp = new;
             resp.statusCode = 403;
             resp.setJsonPayload({ message: "You are already logged in" });
+            addCorsHeaders(resp);
             check caller->respond(resp); return;
         }
     }
@@ -787,6 +839,14 @@ type RegisteredUser record {
     string icNumber;
 };
 
+
+function addCorsHeaders(http:Response resp) {
+    resp.setHeader("Access-Control-Allow-Origin", FRONTEND_AUTH_URL);
+    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, CORELATION-ID, Access-Control-Allow-Origin");
+    resp.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    resp.setHeader("Access-Control-Allow-Credentials", "true");
+    resp.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
+};
 
 
 //ToDos

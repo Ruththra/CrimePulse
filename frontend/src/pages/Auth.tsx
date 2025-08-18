@@ -12,7 +12,7 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:8082/auth/loginRegisteredUser', { method: 'OPTIONS' })
+    fetch('http://localhost:8082/auth', { method: 'OPTIONS' })
       .then(res => {
         if (res.ok) {
           console.log('✅ Backend connected');
@@ -99,7 +99,7 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: {[key: string]: string} = {};
-
+    
     if (!registerData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
     }
@@ -121,37 +121,41 @@ const Auth = () => {
     } else if (registerData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-
+    
     if (registerData.password !== registerData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-
+    
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        const sendData = { ...registerData };
-        // delete sendData.confirmPassword;
+        // Prepare data for backend using FormData
+        const formData = new FormData();
+        formData.append('username', registerData.fullName);
+        formData.append('email', ''); // Email field required by backend but not in form
+        formData.append('phone', registerData.telephone);
+        formData.append('icNumber', registerData.nic);
+        formData.append('password', registerData.password);
+        
         const response = await fetch('http://localhost:8082/auth/createRegisteredUser', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sendData)
+          body: formData,
+          mode: 'cors',
         });
+        
+        if (!response.ok) {
+          const errorResult = await response.json();
+          throw new Error(errorResult.message || 'Failed to register user');
+        }
+        
         const result = await response.json();
 
-        if (!response.ok) {
-          toast({
-            variant: "destructive",
-            title: "Registration Failed",
-            description: result.message || 'Registration failed due to an error.',
-          });
-        } else {
-          toast({
-            title: "Registration Successful",
-            description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
-          });
-          // Redirect logic here if needed
-        }
+        toast({
+          title: "Registration Successful",
+          description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
+        });
+        // Redirect logic here if needed
       } catch (err: any) {
         toast({
           variant: "destructive",
