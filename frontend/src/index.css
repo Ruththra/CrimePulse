@@ -191,14 +191,58 @@
   }
 
   /* News Ticker Animation */
-  .news-ticker {
-    @apply flex whitespace-nowrap;
-    animation: scroll-left 60s linear infinite;
+  .news-feed {
+    padding: 20px;
+    font-family: Arial, sans-serif;
   }
 
-  .news-ticker:hover {
-    animation-play-state: paused;
+  .articles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
   }
+
+  .article {
+    padding: 15px;
+    background-color: #1c1c1c;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    color: #fff;
+    transition: transform 0.2s;
+  }
+
+  .article:hover {
+    transform: translateY(-5px);
+  }
+
+  h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ff5722; /* You can adjust this color */
+  }
+
+  h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #ff9800; /* You can adjust this color */
+  }
+
+  p {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+
+  .read-more-link {
+    font-size: 14px;
+    color: #03a9f4;
+    text-decoration: none;
+  }
+
+  .read-more-link:hover {
+    text-decoration: underline;
+  }
+
+
 }
 
 @layer utilities {

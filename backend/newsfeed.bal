@@ -11,7 +11,7 @@ configurable string apiKey = ?;
         allowOrigins: ["*"]
     }
 }
-service /newsfeed on new http:Listener(8080) {
+service /newsfeed on new http:Listener(8081) {
 
     // GET /news – returns filtered crime news about Sri Lanka
     resource function get news() returns json|error {
@@ -24,8 +24,8 @@ service /newsfeed on new http:Listener(8080) {
         // Tip: if results are empty, remove the &domains=... part first.
         string query = "/v2/everything"
             + "?q=(crime%20OR%20murder%20OR%20robbery%20OR%20assault%20OR%20kidnapping)"
-            + "%20AND%20(%22Sri%20Lanka%22%20OR%20Colombo%20OR%20Kandy%20OR%20Galle%20OR%20Jaffna)"
-            + "&language=en&sortBy=publishedAt&pageSize=50";
+            + "%20AND%20(%22Sri%20Lanka%22%20OR%20Colombo%20OR%20Kandy%20OR%20Galle%20OR%20Jaffna)";
+            //+ "&language=en&sortBy=publishedAt&pageSize=50";
             //+ "&domains=newsfirst.lk,adaderana.lk,dailymirror.lk,dailynews.lk,sundaytimes.lk,colombopage.com";
 
         map<string|string[]> headers = { "X-Api-Key": apiKey };
@@ -43,7 +43,6 @@ service /newsfeed on new http:Listener(8080) {
             return error("Failed to parse news data");
         }
 
-        // CHANGE 2: Safer JSON access + broader keyword set (you can keep this or remove
         // it since the query already filters; keeping it double-checks relevance).
         json[] filtered = [];
         json payload = <json>jsonResponse;
@@ -73,14 +72,8 @@ service /newsfeed on new http:Listener(8080) {
                             string:includes(titleLower, "assault") || string:includes(descLower, "assault") ||
                             string:includes(titleLower, "kidnap")  || string:includes(descLower, "kidnap");
 
-                        boolean mentionsSriLanka =
-                            string:includes(titleLower, "sri lanka") || string:includes(descLower, "sri lanka") ||
-                            string:includes(titleLower, "colombo")   || string:includes(descLower, "colombo")   ||
-                            string:includes(titleLower, "kandy")     || string:includes(descLower, "kandy")     ||
-                            string:includes(titleLower, "galle")     || string:includes(descLower, "galle")     ||
-                            string:includes(titleLower, "jaffna")    || string:includes(descLower, "jaffna");
 
-                        if (hasCrimeKeyword && mentionsSriLanka) {
+                        if (hasCrimeKeyword) {
                             filtered.push(article);
                         }
                     }
