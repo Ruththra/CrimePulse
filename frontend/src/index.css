@@ -204,6 +204,10 @@
     margin-top: 20px;
   }
 
+  .heatmap-container {
+  height: 400px;
+  width: 100%;
+}
   .article {
     padding: 20px;
     background-color: #2c2c2c; /* Darker background for articles */
@@ -306,4 +310,33 @@
   40% { transform: translate(2px, 2px); }
   60% { transform: translate(-2px, -2px); }
   80% { transform: translate(-2px, 2px); }
+}
+
+.apexchart-container,
+.heatmap-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  min-width: 280px;
+}
+
+@media (max-width: 1024px) {
+  .apexchart-container,
+  .heatmap-container {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .apexchart-container,
+  .heatmap-container {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .apexchart-container,
+  .heatmap-container {
+    max-width: 220px;
+  }
 }

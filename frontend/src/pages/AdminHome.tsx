@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Shield, Eye, LogOut, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import HeatMap from '../components/HeatMap';
+import ReactApexChart from 'react-apexcharts';
+import type { ApexOptions } from 'apexcharts';
+
+// If the file exists elsewhere, update the path accordingly, for example:
+// import Piechart from '../components/ui/Piechart';
+// Or, if the file does not exist, create it in src/components/ui/Piechart3D.tsx with a basic export like below:
+
+// src/components/ui/Piechart3D.tsx
+// import React from 'react';
+// const Piechart3D = (props: any) => <div>Piechart3D Placeholder</div>;
+// export default Piechart3D;
 
 interface Complaint {
   id: string;
@@ -59,6 +71,72 @@ const mockComplaints: Complaint[] = [
     reporterName: 'Sarah Wilson'
   }
 ];
+
+const ApexChart = () => {
+  const [state, setState] = useState<{
+    series: number[];
+    options: ApexOptions;
+  }>({
+    series: [14, 23, 21, 17, 15, 10, 12, 17, 21],
+    options: {
+      chart: {
+        type: 'polarArea',
+        width: '100%',
+        height: 400,
+      },
+      stroke: {
+        colors: ['#fff']
+      },
+      fill: {
+        opacity: 0.8
+      },
+      responsive: [
+        {
+          breakpoint: 1024,
+          options: {
+            chart: {
+              width: '100%',
+              height: 300,
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        },
+        {
+          breakpoint: 768,
+          options: {
+            chart: {
+              width: '100%',
+              height: 250,
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        },
+        {
+          breakpoint: 480,
+          options: {
+            chart: {
+              width: '100%',
+              height: 200,
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      ]
+    },
+  });
+
+  return (
+    <div className="apexchart-container">
+      <ReactApexChart options={state.options} series={state.series} type="polarArea" height={400} width="100%" />
+    </div>
+  );
+};
 
 const AdminHome = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -181,69 +259,110 @@ const AdminHome = () => {
           </Card>
         </div>
 
-        {/* Complaints Table */}
-        <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-foreground">Complaints Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reporter</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {complaints.map((complaint) => (
-                    <TableRow key={complaint.id}>
-                      <TableCell className="font-medium">{complaint.id}</TableCell>
-                      <TableCell>{complaint.category}</TableCell>
-                      <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
-                      <TableCell>{complaint.location}</TableCell>
-                      <TableCell>{complaint.date}</TableCell>
-                      <TableCell>{complaint.reporterName}</TableCell>
-                      <TableCell>
-                        <Badge className={getPriorityColor(complaint.priority)}>
-                          {complaint.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusColor(complaint.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(complaint.status)}
-                            <span>{complaint.status}</span>
-                          </div>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
-                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        {/* Main Content: Heatmap left, ApexChart middle, Complaints right */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* ... Stats Cards remain unchanged ... */}
+          </div>
+
+          {/* Top Section: HeatMap left, ApexChart right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Heatmap Section */}
+            {/* <Card className="bg-card/95 backdrop-blur-sm border-destructive/20 p-4">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-foreground">Heat Map</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="heatmap-container">
+                  <HeatMap />
+                </div>
+              </CardContent>
+            </Card> */}
+            <div className="heatmap-container">
+              <HeatMap />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+
+            {/* ApexChart Section */}
+            <Card className="bg-card/95 backdrop-blur-sm border-destructive/20 p-4">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-foreground">Complaints Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="apexchart-container">
+                  <ApexChart />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Bottom Section: Complaints Table */}
+          <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-foreground">Complaints Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="hidden md:table-cell">ID</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="hidden md:table-cell">Description</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Reporter</TableHead>
+                  <TableHead className="hidden md:table-cell">Priority</TableHead>
+                  <TableHead className="hidden md:table-cell">Status</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {complaints.map((complaint) => (
+                  <TableRow key={complaint.id}>
+                    <TableCell className="hidden md:table-cell">{complaint.id}</TableCell>
+                    <TableCell>{complaint.category}</TableCell>
+                    <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
+                    <TableCell>{complaint.location}</TableCell>
+                    <TableCell className="hidden md:table-cell">{complaint.date}</TableCell>
+                    <TableCell className="hidden md:table-cell">{complaint.reporterName}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge className={getPriorityColor(complaint.priority)}>
+                        {complaint.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="outline" className={getStatusColor(complaint.status)}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(complaint.status)}
+                          <span>{complaint.status}</span>
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
+                        className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">View</span>
+                      </Button>
+
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+          </div>
+        </div>
   );
 };
 
