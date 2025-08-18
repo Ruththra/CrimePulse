@@ -32,7 +32,8 @@ const AdminAuth = () => {
       
       const response = await fetch('http://localhost:8082/auth/loginAdmin', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
       });
       
       const result = await response.json();

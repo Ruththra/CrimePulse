@@ -73,7 +73,8 @@ const Auth = () => {
         
         const response = await fetch('http://localhost:8082/auth/loginRegisteredUser', {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'include'
         });
         const result = await response.json();
 
@@ -146,6 +147,7 @@ const Auth = () => {
           method: 'POST',
           body: formData,
           mode: 'cors',
+          credentials: 'include'
         });
         
         if (!response.ok) {

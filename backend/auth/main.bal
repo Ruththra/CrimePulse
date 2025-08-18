@@ -320,7 +320,7 @@ service /auth on authListener {
             
             http:Response resp = new;
             // Remove any existing unregistered user cookie
-            resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
+            // resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
             resp.addCookie(newCookie);
             resp.statusCode = 201;
             resp.setJsonPayload({ message: "User registered successfully", id: id });
@@ -481,7 +481,7 @@ service /auth on authListener {
             );
             http:Response resp = new;
             // Remove any existing unregistered user cookie
-            resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
+            // resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
             resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
             resp.setJsonPayload({ message: "Login successful", id: user.id });
@@ -684,7 +684,7 @@ service /auth on authListener {
 
                 http:Response resp = new;
                 // Remove any existing unregistered user cookie
-                resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
+                // resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
                 resp.addCookie(newCookie);
                 resp.statusCode = 201;
                 resp.setJsonPayload({ message: "User registered successfully", id: id });
