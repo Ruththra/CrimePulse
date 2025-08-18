@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Shield } from 'lucide-react';
 
+import { useToast } from '../hooks/use-toast';
+// Removed: import ReCAPTCHA from 'react-google-recaptcha';
+
+// Removed: const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY'; // Replace with your site key
+
+
 const AdminAuth = () => {
+  const { toast } = useToast();
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -16,14 +23,61 @@ const AdminAuth = () => {
   const [twoFACode, setTwoFACode] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        });
+    });
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Removed: if (!recaptchaToken) { ... }
-    // Mock admin authentication
-    if (credentials.username === 'admin' && credentials.password === 'admin123') {
-      setShow2FA(true);
-    } else {
-      alert('Invalid credentials');
+    
+    try {
+      // Prepare data for backend using FormData
+      const formData = new FormData();
+      formData.append('username', credentials.username);
+      formData.append('password', credentials.password);
+      
+      const response = await fetch('http://localhost:8082/auth/loginAdmin', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        toast({
+          variant: "destructive",
+          title: "Sign In Failed",
+          description: result.message || 'Invalid credentials or server error.',
+        });
+      } else {
+        toast({
+          title: "Sign In Successful",
+          description: result.message || 'Welcome to Crime Pulse Admin Panel!',
+        });
+        setShow2FA(true);
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Sign In Error",
+        description: err.message || 'An error occurred during signin.',
+      });
     }
   };
 
