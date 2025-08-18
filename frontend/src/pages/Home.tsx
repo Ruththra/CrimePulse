@@ -78,7 +78,7 @@ const Home = () => {
         </div>
 
         {/* Floating Action Elements */}
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
+        {/* <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
           <div className="flex space-x-4">
             <Link to="/auth">
               <Button variant="outline" className="btn-outline-crime">
@@ -88,12 +88,12 @@ const Home = () => {
             </Link>
             <Link to="/emergency">
               <Button className="btn-danger">
-                <AlertTriangle className="h-5 w-5 mr-2" />
+                <AlertTriangle className="h-5 w-5 mr-2" />e
                 Emergency Report
               </Button>
             </Link>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Features Section */}
