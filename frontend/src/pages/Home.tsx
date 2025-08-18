@@ -8,6 +8,9 @@ import crimeBackground from '../assets/crime-background.jpg';
 const Home = () => {
   return (
     <div className="min-h-screen">
+      <br/>
+      <br/>
+      <br/>
       {/* News Ticker */}
       <NewsTicker />
       
