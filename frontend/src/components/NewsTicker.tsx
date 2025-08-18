@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 interface Article {
   title: string;
   description: string;
-  url: string; // Added the URL field
+  url: string;
+  image: string; // Added the image field to the interface
 }
 
 const NewsFeed: React.FC = () => {
@@ -46,6 +47,14 @@ const NewsFeed: React.FC = () => {
         {articles.length > 0 ? (
           articles.map((article, index) => (
             <div key={index} className="article">
+              {/* Conditionally render the image if it exists */}
+              {article.image && (
+                <img
+                  src={article.image}
+                  alt={article.title}
+                  className="article-image"
+                />
+              )}
               <h2>{article.title}</h2>
               <p>{article.description}</p>
               <a href={article.url} target="_blank" rel="noopener noreferrer" className="read-more-link">

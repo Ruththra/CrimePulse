@@ -194,37 +194,39 @@
   .news-feed {
     padding: 20px;
     font-family: Arial, sans-serif;
+    background-color: #1c1c1c; /* Make sure the background color of the page contrasts well */
   }
 
   .articles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Makes the grid responsive */
     gap: 20px;
+    margin-top: 20px;
   }
 
   .article {
-    padding: 15px;
-    background-color: #1c1c1c;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    color: #fff;
-    transition: transform 0.2s;
+    padding: 20px;
+    background-color: #2c2c2c; /* Darker background for articles */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2); /* Soft shadow to make grid items stand out */
+    color: #fff; /* White text color */
+    transition: transform 0.3s, box-shadow 0.3s; /* Smooth transition for hover effect */
   }
 
   .article:hover {
-    transform: translateY(-5px);
+    transform: translateY(-5px); /* Slight lift effect on hover */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Slightly stronger shadow on hover */
   }
 
   h1 {
     font-size: 24px;
     margin-bottom: 20px;
-    color: #ff5722; /* You can adjust this color */
+    color: #ff5722; /* Accent color for the heading */
   }
 
   h2 {
     font-size: 18px;
     margin-bottom: 10px;
-    color: #ff9800; /* You can adjust this color */
   }
 
   p {
@@ -242,6 +244,12 @@
     text-decoration: underline;
   }
 
+  .article-image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 15px; /* Adds space between the image and the text */
+  }
 
 }
 
