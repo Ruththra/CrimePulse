@@ -93,6 +93,77 @@ service /auth on authListener {
         resp.statusCode = 200;
         check caller->respond(resp);
     }
+    resource function get identifyRegisteredUser(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "reg_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+
+        http:Response resp = new;
+
+        if cookie is http:Cookie {
+            // Return existing ID
+            resp.setJsonPayload({
+                message: "Existing registered user ID found",
+                reg_user_id: cookie.value,
+                status: "true"
+            });
+        } else {
+            // Add message body
+            resp.setJsonPayload({
+                message: "Registered user ID not found",
+                status: "false"
+            });
+        }
+
+        // Send response with CORS headers
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+    }
+    resource function get identifyAdmin(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "admin_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+
+        http:Response resp = new;
+
+        if cookie is http:Cookie {
+            // Return existing ID
+            resp.setJsonPayload({
+                message: "Existing admin user ID found",
+                admin_user_id: cookie.value,
+                status: "true"
+            });
+        } else {
+            // Add message body
+            resp.setJsonPayload({
+                message: "Admin user ID not found",
+                status: "false"
+            });
+        }
+
+        // Send response with CORS headers
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+    }
+
+
+
 
     // Create or confirm unregistered user based only on cookie ID
     resource function post createUnregisteredUser(http:Caller caller, http:Request req) returns error? {
