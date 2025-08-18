@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, Popup } from 'react-leaflet';
-import { Icon } from 'leaflet';
-import { TrendingUp, AlertCircle } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef, useState } from 'react';
+import { Loader } from '@googlemaps/js-api-loader';
+import { TrendingUp } from 'lucide-react';
 
 // Complete Sri Lanka district data with accurate coordinates and crime data
 const districts = [
@@ -33,28 +31,115 @@ const districts = [
   { name: 'Kegalle', lat: 7.2513, lng: 80.3464, crimes: 45, riskLevel: 'Low', color: '#22c55e' },
 ];
 
-// Enhanced custom icon creation with proper encoding
-const createCustomIcon = (color: string, riskLevel: string) => {
-  const svg = `
-    <svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 0C6.716 0 0 6.716 0 15c0 8.284 15 25 15 25s15-16.716 15-25C30 6.716 23.284 0 15 0z" fill="${color}" stroke="white" stroke-width="2"/>
-      <circle cx="15" cy="15" r="8" fill="white"/>
-      <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="${color}">
-        ${riskLevel.charAt(0)}
-      </text>
-    </svg>
-  `;
-  
-  return new Icon({
-    iconUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    iconSize: [30, 40],
-    iconAnchor: [15, 40],
-    popupAnchor: [0, -40],
-  });
-};
-
 const HeatMap = () => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<typeof districts[0] | null>(null);
+  const infoWindowsRef = useRef<google.maps.InfoWindow[]>([]);
+
+  useEffect(() => {
+    const initMap = async () => {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+      if (!apiKey) {
+        console.error('Google Maps API key not found. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file');
+        return;
+      }
+
+      const loader = new Loader({
+        apiKey: apiKey,
+        version: 'weekly',
+        libraries: ['maps', 'marker']
+      });
+
+      try {
+        await loader.load();
+        
+        if (mapRef.current) {
+          const googleMap = new google.maps.Map(mapRef.current, {
+            center: { lat: 7.8731, lng: 80.7718 },
+            zoom: 8,
+            styles: [
+              {
+                featureType: 'all',
+                elementType: 'geometry',
+                stylers: [{ color: '#f5f5f5' }]
+              },
+              {
+                featureType: 'water',
+                elementType: 'geometry',
+                stylers: [{ color: '#e9e9e9' }]
+              }
+            ]
+          });
+
+          setMap(googleMap);
+
+          // Add markers for each district
+          districts.forEach((district) => {
+            const marker = new google.maps.Marker({
+              position: { lat: district.lat, lng: district.lng },
+              map: googleMap,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 12,
+                fillColor: district.color,
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+              },
+              title: district.name
+            });
+
+            // Create info window
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding: 12px; min-width: 200px;">
+                  <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #1e293b;">${district.name}</div>
+                  <div style="font-size: 14px; color: #475569; margin-bottom: 4px;">${district.crimes} reported crimes</div>
+                  <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 9999px; background: ${district.color};"></span>
+                    <span style="font-weight: 500; color: #374151;">${district.riskLevel} Risk</span>
+                  </div>
+                </div>
+              `
+            });
+
+            // Add circle for 1km radius
+            new google.maps.Circle({
+              strokeColor: district.color,
+              strokeOpacity: 0.8,
+              strokeWeight: 2,
+              fillColor: district.color,
+              fillOpacity: 0.15,
+              map: googleMap,
+              center: { lat: district.lat, lng: district.lng },
+              radius: 1000 // 1km in meters
+            });
+
+            // Add click listener
+            marker.addListener('click', () => {
+              // Close all other info windows
+              infoWindowsRef.current.forEach(iw => iw.close());
+              
+              infoWindow.open(googleMap, marker);
+              setSelectedDistrict(district);
+            });
+
+            infoWindowsRef.current.push(infoWindow);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading Google Maps:', error);
+      }
+    };
+
+    initMap();
+
+    return () => {
+      // Cleanup info windows
+      infoWindowsRef.current.forEach(iw => iw.close());
+    };
+  }, []);
 
   const legend = (
     <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -83,35 +168,11 @@ const HeatMap = () => {
         Sri Lanka Crime Heat Map
       </h3>
 
-      <MapContainer center={[7.8731, 80.7718]} zoom={8} className="rounded-lg overflow-hidden border border-border h-[520px]">
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        {districts.map((district) => (
-          <Marker
-            key={district.name}
-            position={[district.lat, district.lng]}
-            icon={createCustomIcon(district.color, district.riskLevel)}
-          >
-            <Popup>
-              <div style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial' }}>
-                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8, color: '#1e293b' }}>{district.name}</div>
-                <div style={{ fontSize: 14, color: '#475569', marginBottom: 4 }}>{district.crimes} reported crimes</div>
-                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-                  <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '9999px', background: district.color }}></span>
-                  <span style={{ fontWeight: 500, color: '#374151' }}>{district.riskLevel} Risk</span>
-                </div>
-              </div>
-            </Popup>
-            <Circle
-              center={[district.lat, district.lng]}
-              radius={1000} // 1 km radius
-              pathOptions={{ color: district.color, fillColor: district.color, fillOpacity: 0.15 }}
-            />
-          </Marker>
-        ))}
-      </MapContainer>
+      <div 
+        ref={mapRef} 
+        className="rounded-lg overflow-hidden border border-border h-[520px]"
+        style={{ width: '100%' }}
+      />
 
       {legend}
     </div>
