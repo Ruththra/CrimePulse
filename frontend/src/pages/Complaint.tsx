@@ -1,27 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Calendar, MapPin, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { useToast } from '../hooks/use-toast';
 import crimeBackground from '../assets/crime-background.jpg';
+
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const defaultDate = now.toISOString().split('T')[0];
+  const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
 const Complaint = () => {
   const [complaintData, setComplaintData] = useState({
     category: '',
     description: '',
-    date: '',
-    time: '',
+    date: defaultDate,
+    time: defaultTime,
     location: '',
-    media: null as File | null
+    media: [] as File[]
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        })
+    });
+  }, []);
 
   const categories = [
     { value: 'Theft', label: 'Theft' },
@@ -32,22 +56,26 @@ const Complaint = () => {
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setErrors({...errors, media: 'File size must be less than 10MB'});
-        return;
-      }
-      
-      // Check file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'];
-      if (!allowedTypes.includes(file.type)) {
-        setErrors({...errors, media: 'Only JPG, PNG, MP4, and MOV files are allowed'});
-        return;
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    const allowedTypes = ['image/jpeg', 'image/png','image/heic', 'video/mp4', 'video/quicktime','video/x-m4v' ];
+    for (let file of files){
+      if (file) {
+        // Check each file size (max 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+          setErrors({...errors, media: 'File size must be less than 50MB'});
+          return;
+        }
+        
+        // Check each file type
+        if (!allowedTypes.includes(file.type)) {
+          setErrors({...errors, media: 'Only JPG, PNG,HEIC, MP4,M4V and MOV files are allowed'});
+          return;
+        }
       }
 
-      setComplaintData({...complaintData, media: file});
+
+      setComplaintData({    ...complaintData, media: [...complaintData.media, ...files] 
+      });
       setErrors({...errors, media: ''});
     }
   };
@@ -103,18 +131,28 @@ const Complaint = () => {
       formData.append('date', complaintData.date);
       formData.append('time', complaintData.time);
       formData.append('location', complaintData.location);
-      if (complaintData.media) {
-        formData.append('media', complaintData.media);
+      if (complaintData.media.length > 0) {
+        complaintData.media.forEach((file, index) => {
+          formData.append('media', file);
+        });
       }
 
       const response = await fetch("http://localhost:8081/complaints/submit", {
         method: 'POST',
         body: formData,
         mode: 'cors',
+        credentials: 'include'
       });
+      
       if (!response.ok) {
         throw new Error('Failed to submit complaint. Please try again.');
       }
+      // Handle success response
+      toast({
+        title: 'Complaint Submitted',
+        description: 'Your complaint has been successfully submitted.',
+        variant: 'success'
+      })
 
       setShowSuccess(true);
       // Reset form
@@ -124,7 +162,7 @@ const Complaint = () => {
         date: '',
         time: '',
         location: '',
-        media: null
+        media: []
       });
     } catch (error:any) {
       toast({
@@ -136,6 +174,7 @@ const Complaint = () => {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div 
@@ -207,6 +246,7 @@ const Complaint = () => {
                     value={complaintData.date}
                     onChange={(e) => setComplaintData({...complaintData, date: e.target.value})}
                     max={new Date().toISOString().split('T')[0]}
+                    defaultValue={defaultDate}
                   />
                 </div>
                 {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
@@ -220,6 +260,7 @@ const Complaint = () => {
                   className="input-crime"
                   value={complaintData.time}
                   onChange={(e) => setComplaintData({...complaintData, time: e.target.value})}
+                  defaultValue={defaultTime}
                 />
                 {errors.time && <p className="text-sm text-destructive">{errors.time}</p>}
               </div>
@@ -245,32 +286,53 @@ const Complaint = () => {
             {/* Media Upload */}
             <div className="space-y-2">
               <Label htmlFor="media">Upload Evidence (Optional)</Label>
+
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                 <input
-                  id="media"
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
+                      id="media"
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
                 />
-                <label htmlFor="media" className="cursor-pointer">
-                  <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Click to upload images or videos
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Supported: JPG, PNG, MP4, MOV (Max 10MB)
-                  </p>
-                </label>
+                
+                {!complaintData.media.length ? (
+                  <label htmlFor="media" className="cursor-pointer">
+                    <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Click to upload images or videos
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Supported: JPG, PNG, HEIC, M4V, MP4, MOV (Max 50MB)
+                    </p>
+                    </label>
+                  
+                ) : (
+                  <label htmlFor="media" className="cursor-pointer">
+                  <div className="flex flex-col items-center space-y-2">
+                    <CheckCircle className="h-10 w-10 text-green-600" />
+                    <ul className="text-sm font-medium space-y-1">
+                      {complaintData.media.map((file: File, idx: number) => (
+                        <li key={idx}>{file.name}</li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => setComplaintData({ ...complaintData, media: [] })}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      Remove all files
+                    </button>
+                  </div>
+                  </label>
+                )}
               </div>
-              {complaintData.media && (
-                <div className="text-sm text-green-600 flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  File uploaded: {complaintData.media.name}
-                </div>
+
+              {errors.media && (
+                <p className="text-sm text-destructive">{errors.media}</p>
               )}
-              {errors.media && <p className="text-sm text-destructive">{errors.media}</p>}
             </div>
+
 
             {/* reCAPTCHA Placeholder */}
             <div className="border border-border rounded-lg p-4 bg-secondary/20">
@@ -326,6 +388,9 @@ const Complaint = () => {
               <CheckCircle className="h-6 w-6 mr-2" />
               Complaint Submitted Successfully
             </DialogTitle>
+            <DialogDescription>
+              Your complaint has been successfully submitted to the authorities.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">
@@ -337,8 +402,8 @@ const Complaint = () => {
             <p className="text-sm text-muted-foreground">
               You will receive updates via SMS and email. Keep this reference number for future inquiries.
             </p>
-            <Button 
-              onClick={() => setShowSuccess(false)} 
+            <Button
+              onClick={() => setShowSuccess(false)}
               className="btn-crime w-full"
             >
               Continue

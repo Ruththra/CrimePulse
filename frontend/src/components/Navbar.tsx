@@ -11,7 +11,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'FAQ', href: '/faq' },
     { name: 'Contacts', href: '/contacts' },
-    { name: 'Sign In / Register', href: '/auth' },
+    { name: 'Sign In', href: '/auth' },
     { name: 'Profiles', href: '/profiles' },
   ];
 

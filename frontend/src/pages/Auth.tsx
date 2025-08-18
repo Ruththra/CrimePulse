@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,38 @@ import crimeBackground from '@/assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check backend connectivity
+    fetch('http://localhost:8082/auth', { method: 'OPTIONS' })
+      .then(res => {
+        if (res.ok) {
+          console.log('✅ Backend connected');
+        } else {
+          console.log('❌ Backend not connected (response not ok)');
+        }
+      })
+      .catch(err => {
+        console.log('❌ Backend not connected:', err.message);
+      });
+    
+    // Ensure unreg_user_id cookie is present
+    fetch('http://localhost:8082/auth/identify', {
+      method: 'GET',
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Unregistered user ID ensured:', data);
+    })
+    .catch(err => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        })
+    });
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
@@ -32,7 +64,7 @@ const Auth = () => {
     return /^(?:\+94|0)?[1-9][0-9]{8}$/.test(phone);
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: {[key: string]: string} = {};
 
@@ -51,17 +83,46 @@ const Auth = () => {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      toast({
-        title: "Sign In Successful",
-        description: "Welcome back to Crime Pulse!",
-      });
+      try {
+        // Prepare data for backend using FormData
+        const formData = new FormData();
+        formData.append('email', signInData.email);
+        formData.append('password', signInData.password);
+        
+        const response = await fetch('http://localhost:8082/auth/loginRegisteredUser', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast({
+            variant: "destructive",
+            title: "Sign In Failed",
+            description: result.message || 'Invalid credentials or server error.',
+          });
+        } else {
+          toast({
+            title: "Sign In Successful",
+            description: result.message || 'Welcome back to Crime Pulse!',
+          });
+          // Redirect logic here if needed
+        }
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Sign In Error",
+          description: err.message || 'An error occurred during signin.',
+        });
+      }
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: {[key: string]: string} = {};
-
+    
     if (!registerData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
     }
@@ -83,18 +144,49 @@ const Auth = () => {
     } else if (registerData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-
+    
     if (registerData.password !== registerData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-
+    
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to Crime Pulse! You can now report crimes.",
-      });
+      try {
+        // Prepare data for backend using FormData
+        const formData = new FormData();
+        formData.append('username', registerData.fullName);
+        formData.append('email', ''); // Email field required by backend but not in form
+        formData.append('phone', registerData.telephone);
+        formData.append('icNumber', registerData.nic);
+        formData.append('password', registerData.password);
+        
+        const response = await fetch('http://localhost:8082/auth/createRegisteredUser', {
+          method: 'POST',
+          body: formData,
+          mode: 'cors',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorResult = await response.json();
+          throw new Error(errorResult.message || 'Failed to register user');
+        }
+        
+        const result = await response.json();
+
+        toast({
+          title: "Registration Successful",
+          description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
+        });
+        // Redirect logic here if needed
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Registration Error",
+          description: err.message || 'An error occurred during registration.',
+        });
+      }
     }
   };
 

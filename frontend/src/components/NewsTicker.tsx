@@ -1,39 +1,73 @@
-import { AlertTriangle, Clock, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 
-const NewsTicker = () => {
-  const newsItems = [
-    { id: 1, text: "BREAKING: Armed robbery reported in Colombo 03", location: "Colombo", time: "2 min ago" },
-    { id: 2, text: "ALERT: Missing person case - Rajitha Fernando, age 45", location: "Kandy", time: "15 min ago" },
-    { id: 3, text: "UPDATE: Cybercrime unit arrests 3 suspects in online fraud", location: "Galle", time: "1 hour ago" },
-    { id: 4, text: "URGENT: Vehicle theft reported - Red Toyota Prius", location: "Negombo", time: "2 hours ago" },
-    { id: 5, text: "RESOLVED: Hit and run case closed with arrest", location: "Matara", time: "4 hours ago" },
-  ];
+interface Article {
+  title: string;
+  description: string;
+  url: string;
+  image: string; // Added the image field to the interface
+}
+
+const NewsFeed: React.FC = () => {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Function to fetch the news from the backend
+    const fetchNews = async () => {
+      try {
+        const response = await fetch('http://localhost:8081/newsfeed/news');
+        if (!response.ok) {
+          throw new Error('Failed to fetch news');
+        }
+        const data = await response.json();
+        setArticles(data.articles); // Assuming the data follows the same structure returned by the backend
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
-    <div className="crime-tape overflow-hidden relative">
-      <div className="flex items-center py-2">
-        <div className="flex items-center mr-8">
-          <AlertTriangle className="h-5 w-5 text-black mr-2 animate-pulse" />
-          <span className="font-black text-sm">CRIME ALERTS</span>
-        </div>
-        
-        <div className="news-ticker">
-          {newsItems.map((item, index) => (
-            <div key={`${item.id}-${index}`} className="flex items-center mx-8 text-sm">
-              <span className="font-semibold text-black">{item.text}</span>
-              <div className="flex items-center ml-4 text-black/80">
-                <MapPin className="h-3 w-3 mr-1" />
-                <span className="mr-2">{item.location}</span>
-                <Clock className="h-3 w-3 mr-1" />
-                <span>{item.time}</span>
-              </div>
-              <span className="mx-4 text-black">●</span>
+    <div className="news-feed">
+      <h1>Crime News from Sri Lanka</h1>
+      <div className="articles-grid">
+        {articles.length > 0 ? (
+          articles.map((article, index) => (
+            <div key={index} className="article">
+              {/* Conditionally render the image if it exists */}
+              {article.image && (
+                <img
+                  src={article.image}
+                  alt={article.title}
+                  className="article-image"
+                />
+              )}
+              <h2>{article.title}</h2>
+              <p>{article.description}</p>
+              <a href={article.url} target="_blank" rel="noopener noreferrer" className="read-more-link">
+                Read more
+              </a>
             </div>
-          ))}
-        </div>
+          ))
+        ) : (
+          <p>No crime news available</p>
+        )}
       </div>
     </div>
   );
 };
 
-export default NewsTicker;
+export default NewsFeed;
