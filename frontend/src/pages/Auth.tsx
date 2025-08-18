@@ -66,10 +66,14 @@ const Auth = () => {
 
     if (Object.keys(newErrors).length === 0) {
       try {
+        // Prepare data for backend using FormData
+        const formData = new FormData();
+        formData.append('email', signInData.email);
+        formData.append('password', signInData.password);
+        
         const response = await fetch('http://localhost:8082/auth/loginRegisteredUser', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(signInData)
+          body: formData
         });
         const result = await response.json();
 

@@ -1,7 +1,7 @@
 import ballerina/http;
 import ballerina/mime;
 // import ballerina/file;
-import ballerina/io;
+// import ballerina/io;
 import ballerina/uuid;
 import ballerina/lang.'string as string;
 import ballerinax/mongodb;
@@ -130,7 +130,7 @@ service /auth on authListener {
     }
 
     resource function post createRegisteredUser(http:Caller caller, http:Request req) returns error? {
-        io:println("inside registered user...");
+        // io:println("inside registered user...");
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie  = ();
         
@@ -306,9 +306,9 @@ service /auth on authListener {
                 phone: phone,
                 icNumber: icNumber
             };
-            io:println("Inserting new user: ", newUser);
+            // io:println("Inserting new user: ", newUser);
             check regUsersCol->insertOne(newUser);
-            io:println("User inserted successfully");
+            // io:println("User inserted successfully");
             
             http:Cookie newCookie = new (
                 name = "reg_user_id",
@@ -385,41 +385,63 @@ service /auth on authListener {
             }
         }
         if loginCookie is () {
-
-            json|error payload = req.getJsonPayload();
-            if payload is error {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON payload" });
-                addCorsHeaders(resp);
-                check caller->respond(resp); return;
-            }
-
-            string username = "";
-            string email = "";
-            string password = "";
-            if payload is map<json> {
-                if payload.hasKey("username") && payload["username"] is string {
-                    username = (<string>payload["username"]).trim();
-                }
-                if payload.hasKey("email") && payload["email"] is string {
-                    email = (<string>payload["email"]).trim();
-                }
-                if payload.hasKey("password") && payload["password"] is string {
-                    password = <string>payload["password"];
-                }
+            // Parse multipart form data
+            mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
+            mime:Entity[] bodyParts = [];
+            if bodyPartsResult is mime:Entity[] {
+                bodyParts = bodyPartsResult;
             } else {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON object" });
-                addCorsHeaders(resp);
-                check caller->respond(resp); return;
+                http:Response errorResp = new;
+                errorResp.statusCode = 400;
+                errorResp.setJsonPayload({
+                    message: "Invalid multipart body"
+                });
+                addCorsHeaders(errorResp);
+                check caller->respond(errorResp);
+                return;
+            }
+            
+            // Extract form fields
+            // string username = "";
+            string password = "";
+            string email = "";
+            
+            foreach mime:Entity part in bodyParts {
+                mime:ContentDisposition? cd = part.getContentDisposition();
+                string? partName = cd is mime:ContentDisposition ? cd.name : ();
+                
+                if partName is string {
+                    match partName {
+                        // "username" => {
+                        //     var value = part.getText();
+                        //     if value is string {
+                        //         username = value.trim();
+                        //     }
+                        // }
+                        "password" => {
+                            var value = part.getText();
+                            if value is string {
+                                password = value;
+                            }
+                        }
+                        "email" => {
+                            var value = part.getText();
+                            if value is string {
+                                email = value.trim();
+                            }
+                        }
+                        // Ignore any unexpected parts.
+                        _ => {
+                            // Do nothing.
+                        }
+                    }
+                }
             }
 
-            if password == "" || (username == "" && email == "") {
+            if password == "" && email == "" {
                 http:Response resp = new;
                 resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
+                resp.setJsonPayload({ message: "Missing required fields: password and email" });
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
@@ -429,7 +451,7 @@ service /auth on authListener {
             
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
-            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { email: email });
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(email != "" ? { email: email } : { password: password });
             RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
 
             if matches.length() == 0 {
@@ -704,35 +726,57 @@ service /auth on authListener {
             }
         }
         if loginCookie is () {
-
-            json|error payload = req.getJsonPayload();
-            if payload is error {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON payload" });
-                addCorsHeaders(resp);
-                check caller->respond(resp); return;
-            }
-
-            string username = "";
-            string email = "";
-            string password = "";
-            if payload is map<json> {
-                if payload.hasKey("username") && payload["username"] is string {
-                    username = (<string>payload["username"]).trim();
-                }
-                if payload.hasKey("email") && payload["email"] is string {
-                    email = (<string>payload["email"]).trim();
-                }
-                if payload.hasKey("password") && payload["password"] is string {
-                    password = <string>payload["password"];
-                }
+            // Parse multipart form data
+            mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
+            mime:Entity[] bodyParts = [];
+            if bodyPartsResult is mime:Entity[] {
+                bodyParts = bodyPartsResult;
             } else {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON object" });
-                addCorsHeaders(resp);
-                check caller->respond(resp); return;
+                http:Response errorResp = new;
+                errorResp.statusCode = 400;
+                errorResp.setJsonPayload({
+                    message: "Invalid multipart body"
+                });
+                addCorsHeaders(errorResp);
+                check caller->respond(errorResp);
+                return;
+            }
+            
+            // Extract form fields
+            string username = "";
+            string password = "";
+            string email = "";
+            
+            foreach mime:Entity part in bodyParts {
+                mime:ContentDisposition? cd = part.getContentDisposition();
+                string? partName = cd is mime:ContentDisposition ? cd.name : ();
+                
+                if partName is string {
+                    match partName {
+                        "username" => {
+                            var value = part.getText();
+                            if value is string {
+                                username = value.trim();
+                            }
+                        }
+                        "password" => {
+                            var value = part.getText();
+                            if value is string {
+                                password = value;
+                            }
+                        }
+                        "email" => {
+                            var value = part.getText();
+                            if value is string {
+                                email = value.trim();
+                            }
+                        }
+                        // Ignore any unexpected parts.
+                        _ => {
+                            // Do nothing.
+                        }
+                    }
+                }
             }
 
             if password == "" || (username == "" && email == "") {
