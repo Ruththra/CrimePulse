@@ -1,5 +1,5 @@
 import ballerina/http;
-// import ballerina/mime;
+import ballerina/mime;
 // import ballerina/file;
 import ballerina/io;
 import ballerina/uuid;
@@ -133,174 +133,197 @@ service /auth on authListener {
         io:println("inside registered user...");
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie  = ();
-
-        // Look for the cookie named "unreg_user_id"
+        
+        // Look for the cookie named "reg_user_id"
         foreach http:Cookie c in cookies {
             if c.name == "reg_user_id" {
                 cookie = c;
                 break;
             }
         }
-
+        
         if cookie is () {
-
-            json|error payload = req.getJsonPayload();
-            if payload is error {
-            http:Response resp = new;
-            resp.statusCode = 400;
-            resp.setJsonPayload({ message: "Invalid JSON payload" });
-            addCorsHeaders(resp);
-            check caller->respond(resp);
-            return;
-            }
-
-            if payload is map<json> {
-                string username = "";
-                string password = "";
-                string email = "";
-                string phone = "";
-                string icNumber = "";
-
-                if payload["username"] is string {
-                    string uname = <string>payload["username"];
-                    username = uname.trim();
-                }
-
-                if payload["password"] is string {
-                    string pwd = <string>payload["password"];
-                    password = pwd;
-                }
-                if payload["email"] is string {
-                    string mail = <string>payload["email"];
-                    email = mail.trim();
-                }
-                if payload["phone"] is string {
-                    string ph = <string>payload["phone"];
-                    phone = ph.trim();
-                }
-                if payload["icNumber"] is string {
-                    string ic = <string>payload["icNumber"];
-                    icNumber = ic.trim();
-                }
-
-                // Basic validation on mandatory fields
-                if username == "" || password == "" || email == "" || phone == "" || icNumber == "" {
-                    http:Response resp = new;
-                    resp.statusCode = 400;
-                    resp.setJsonPayload({ message: "All fields (username, password, email, phone, icNumber) are required" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Password validation: at least 8 chars, one uppercase, one lowercase, one digit, one special char
-                if !validatePassword(password) {
-                    http:Response resp = new;
-                    resp.statusCode = 400;
-                    resp.setJsonPayload({ message: "Password must be at least 8 characters including uppercase, lowercase, digit and special character" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Email validation (basic regex)
-                if !validateEmail(email) {
-                    http:Response resp = new;
-                    resp.statusCode = 400;
-                    resp.setJsonPayload({ message: "Invalid email format" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Verify email via OTP (simulate sending and validation)
-                boolean emailVerified = verifyEmailOtp(email);
-                if !emailVerified {
-                    http:Response resp = new;
-                    resp.statusCode = 400;
-                    resp.setJsonPayload({ message: "Email verification failed" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Validate Sri Lankan IC number format (e.g. 9 digits + V or X)
-                if !validateSriLankanIC(icNumber) {
-                    http:Response resp = new;
-                    resp.statusCode = 400;
-                    resp.setJsonPayload({ message: "Invalid Sri Lankan IC number format" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Check if user already exists (by username or email)
-                mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
-
-                // Check username exists
-                stream<RegisteredUser, error?> existingUsers = check regUsersCol->find({ username: username });
-                RegisteredUser[] usersList = check from RegisteredUser u in existingUsers select u;
-                if usersList.length() > 0 {
-                    http:Response resp = new;
-                    resp.statusCode = 409;
-                    resp.setJsonPayload({ message: "Username already exists" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                // Check email exists
-                existingUsers = check regUsersCol->find({ email: email });
-                usersList = check from RegisteredUser u in existingUsers select u;
-                if usersList.length() > 0 {
-                    http:Response resp = new;
-                    resp.statusCode = 409;
-                    resp.setJsonPayload({ message: "Email already registered" });
-                    addCorsHeaders(resp);
-                    check caller->respond(resp);
-                    return;
-                }
-
-                string id = uuid:createType4AsString();
-
-                // Hash the password before saving
-                string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
-                // Create user record
-                RegisteredUser newUser = {
-                    id: id,
-                    username: username,
-                    password: hashedPassword,
-                    email: email,
-                    phone: phone,
-                    icNumber: icNumber
-                };
-                io:println("Inserting new user: ", newUser);
-                check regUsersCol->insertOne(newUser);
-                io:println("User inserted successfully");
-
-                http:Cookie newCookie = new (
-                    name = "reg_user_id",
-                    value = id,
-                    path = "/",
-                    httpOnly = true,
-                    maxAge = 60 * 60 * 24 * 365 // 1 year
-                );
-
-                http:Response resp = new;
-                resp.addCookie(newCookie);
-                resp.statusCode = 201;
-                resp.setJsonPayload({ message: "User registered successfully", id: id });
-                addCorsHeaders(resp);
-                check caller->respond(resp);
-
+            // Parse multipart form data
+            mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
+            mime:Entity[] bodyParts = [];
+            if bodyPartsResult is mime:Entity[] {
+                bodyParts = bodyPartsResult;
             } else {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON payload structure" });
-                addCorsHeaders(resp);
-                check caller->respond(resp);
+                http:Response errorResp = new;
+                errorResp.statusCode = 400;
+                errorResp.setJsonPayload({
+                    message: "Invalid multipart body"
+                });
+                addCorsHeaders(errorResp);
+                check caller->respond(errorResp);
+                return;
             }
             
+            // Extract form fields
+            string username = "";
+            string password = "";
+            string email = ""; // Required by backend but not in frontend form
+            string phone = "";
+            string icNumber = "";
+            
+            foreach mime:Entity part in bodyParts {
+                mime:ContentDisposition? cd = part.getContentDisposition();
+                string? partName = cd is mime:ContentDisposition ? cd.name : ();
+                
+                if partName is string {
+                    match partName {
+                        "username" => {
+                            var value = part.getText();
+                            if value is string {
+                                username = value.trim();
+                            }
+                        }
+                        "password" => {
+                            var value = part.getText();
+                            if value is string {
+                                password = value;
+                            }
+                        }
+                        "email" => {
+                            var value = part.getText();
+                            if value is string {
+                                email = value.trim();
+                            }
+                        }
+                        "phone" => {
+                            var value = part.getText();
+                            if value is string {
+                                phone = value.trim();
+                            }
+                        }
+                        "icNumber" => {
+                            var value = part.getText();
+                            if value is string {
+                                icNumber = value.trim();
+                            }
+                        }
+                        // Ignore any unexpected parts.
+                        _ => {
+                            // Do nothing.
+                        }
+                    }
+                }
+            }
+            
+            // Basic validation on mandatory fields
+            if username == "" || password == "" || phone == "" || icNumber == "" {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "All fields (username, password, phone, icNumber) are required" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // For now, we'll use the phone number as a placeholder for email since the frontend doesn't have an email field
+            if email == "" {
+                email = phone + "@placeholder.com";
+            }
+            
+            // Password validation: at least 8 chars, one uppercase, one lowercase, one digit, one special char
+            if !validatePassword(password) {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Password must be at least 8 characters including uppercase, lowercase, digit and special character" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // Email validation (basic regex)
+            if !validateEmail(email) {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Invalid email format" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // Verify email via OTP (simulate sending and validation)
+            boolean emailVerified = verifyEmailOtp(email);
+            if !emailVerified {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Email verification failed" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // Validate Sri Lankan IC number format (e.g. 9 digits + V or X)
+            if !validateSriLankanIC(icNumber) {
+                http:Response resp = new;
+                resp.statusCode = 400;
+                resp.setJsonPayload({ message: "Invalid Sri Lankan IC number format" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // Check if user already exists (by username or email)
+            mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
+            
+            // Check username exists
+            stream<RegisteredUser, error?> existingUsers = check regUsersCol->find({ username: username });
+            RegisteredUser[] usersList = check from RegisteredUser u in existingUsers select u;
+            if usersList.length() > 0 {
+                http:Response resp = new;
+                resp.statusCode = 409;
+                resp.setJsonPayload({ message: "Username already exists" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            // Check email exists
+            existingUsers = check regUsersCol->find({ email: email });
+            usersList = check from RegisteredUser u in existingUsers select u;
+            if usersList.length() > 0 {
+                http:Response resp = new;
+                resp.statusCode = 409;
+                resp.setJsonPayload({ message: "Email already registered" });
+                addCorsHeaders(resp);
+                check caller->respond(resp);
+                return;
+            }
+            
+            string id = uuid:createType4AsString();
+            
+            // Hash the password before saving
+            string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
+            // Create user record
+            RegisteredUser newUser = {
+                id: id,
+                username: username,
+                password: hashedPassword,
+                email: email,
+                phone: phone,
+                icNumber: icNumber
+            };
+            io:println("Inserting new user: ", newUser);
+            check regUsersCol->insertOne(newUser);
+            io:println("User inserted successfully");
+            
+            http:Cookie newCookie = new (
+                name = "reg_user_id",
+                value = id,
+                path = "/",
+                httpOnly = true,
+                maxAge = 60 * 60 * 24 * 365 // 1 year
+            );
+            
+            http:Response resp = new;
+            resp.addCookie(newCookie);
+            resp.statusCode = 201;
+            resp.setJsonPayload({ message: "User registered successfully", id: id });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
         } else {
             // Return existing ID
             http:Response resp = new;
@@ -308,8 +331,9 @@ service /auth on authListener {
             resp.setJsonPayload({ message: "You already have an account" });
             addCorsHeaders(resp);
             check caller->respond(resp);
-            }
+        }
     }
+
     resource function post logoutRegisteredUser(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie = ();
@@ -338,7 +362,7 @@ service /auth on authListener {
         //     value = "",
         //     path = "/",
         //     httpOnly = true,
-        //     maxAge = 0 // Instructs browser to delete immediately
+            // maxAge = 0 // Instructs browser to delete immediately
         // );
         
         // Also add a header to remove the cookie, which provides an additional way
@@ -392,7 +416,7 @@ service /auth on authListener {
                 check caller->respond(resp); return;
             }
 
-            if password == "" || (username == "" || email == "") {
+            if password == "" || (username == "" && email == "") {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
@@ -405,7 +429,7 @@ service /auth on authListener {
             
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
-            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ username: username });
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { email: email });
             RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
 
             if matches.length() == 0 {
@@ -416,10 +440,10 @@ service /auth on authListener {
                 check caller->respond(resp); return;
             }
             RegisteredUser user = matches[0];
-            if user.password != hashedPassword && user.email != email {
+            if user.password != hashedPassword {
                 http:Response resp = new;
                 resp.statusCode = 401;
-                resp.setJsonPayload({ message: "Incorrect password or email" });
+                resp.setJsonPayload({ message: "Incorrect password" });
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
@@ -711,7 +735,7 @@ service /auth on authListener {
                 check caller->respond(resp); return;
             }
 
-            if password == "" || (username == "" || email == "") {
+            if password == "" || (username == "" && email == "") {
                 http:Response resp = new;
                 resp.statusCode = 400;
                 resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
@@ -724,7 +748,7 @@ service /auth on authListener {
             
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
-            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ username: username });
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { email: email });
             RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
 
             if matches.length() == 0 {
@@ -735,10 +759,10 @@ service /auth on authListener {
                 check caller->respond(resp); return;
             }
             RegisteredUser user = matches[0];
-            if user.password != hashedPassword && user.email != email {
+            if user.password != hashedPassword {
                 http:Response resp = new;
                 resp.statusCode = 401;
-                resp.setJsonPayload({ message: "Incorrect password or email" });
+                resp.setJsonPayload({ message: "Incorrect password" });
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
