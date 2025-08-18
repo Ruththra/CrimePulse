@@ -324,7 +324,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "mongodb"
-version = "5.2.0"
+version = "5.2.1"
 dependencies = [
 	{org = "ballerina", name = "crypto"},
 	{org = "ballerina", name = "jballerina.java"},

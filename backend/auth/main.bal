@@ -451,7 +451,7 @@ service /auth on authListener {
             
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
-            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(email != "" ? { email: email } : { password: password });
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(email != "" ? { email: email } : { password: hashedPassword });
             RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
 
             if matches.length() == 0 {
@@ -509,44 +509,72 @@ service /auth on authListener {
 
         if cookie is () {
 
-            json|error payload = req.getJsonPayload();
-            if payload is error {
-            http:Response resp = new;
-            resp.statusCode = 400;
-            resp.setJsonPayload({ message: "Invalid JSON payload" });
-            addCorsHeaders(resp);
-            check caller->respond(resp);
-            return;
+            // Parse multipart form data
+            mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
+            mime:Entity[] bodyParts = [];
+            if bodyPartsResult is mime:Entity[] {
+                bodyParts = bodyPartsResult;
+            } else {
+                http:Response errorResp = new;
+                errorResp.statusCode = 400;
+                errorResp.setJsonPayload({
+                    message: "Invalid multipart body"
+                });
+                addCorsHeaders(errorResp);
+                check caller->respond(errorResp);
+                return;
             }
-
-            if payload is map<json> {
-                string username = "";
-                string password = "";
-                string email = "";
-                string phone = "";
-                string icNumber = "";
-
-                if payload["username"] is string {
-                    string uname = <string>payload["username"];
-                    username = uname.trim();
+            
+            // Extract form fields
+            string username = "";
+            string password = "";
+            string email = "";
+            string phone = "";
+            string icNumber = "";
+            
+            foreach mime:Entity part in bodyParts {
+                mime:ContentDisposition? cd = part.getContentDisposition();
+                string? partName = cd is mime:ContentDisposition ? cd.name : ();
+                
+                if partName is string {
+                    match partName {
+                        "username" => {
+                            var value = part.getText();
+                            if value is string {
+                                username = value.trim();
+                            }
+                        }
+                        "password" => {
+                            var value = part.getText();
+                            if value is string {
+                                password = value;
+                            }
+                        }
+                        "email" => {
+                            var value = part.getText();
+                            if value is string {
+                                email = value.trim();
+                            }
+                        }
+                        "phone" => {
+                            var value = part.getText();
+                            if value is string {
+                                phone = value.trim();
+                            }
+                        }
+                        "icNumber" => {
+                            var value = part.getText();
+                            if value is string {
+                                icNumber = value.trim();
+                            }
+                        }
+                        // Ignore any unexpected parts.
+                        _ => {
+                            // Do nothing.
+                        }
+                    }
                 }
-
-                if payload["password"] is string {
-                    string pwd = <string>payload["password"];
-                    password = pwd;
-                }
-                if payload["email"] is string {
-                    string mail = <string>payload["email"];
-                    email = mail.trim();
-                }
-                if payload["phone"] is string {
-                    string ph = <string>payload["phone"];
-                    phone = ph.trim();
-                }
-                if payload["icNumber"] is string {
-                    string ic = <string>payload["icNumber"];
-                    icNumber = ic.trim();
-                }
+            }
 
                 // Basic validation on mandatory fields
                 if username == "" || password == "" || email == "" || phone == "" || icNumber == "" {
@@ -657,14 +685,6 @@ service /auth on authListener {
                 addCorsHeaders(resp);
                 check caller->respond(resp);
 
-            } else {
-                http:Response resp = new;
-                resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Invalid JSON payload structure" });
-                addCorsHeaders(resp);
-                check caller->respond(resp);
-            }
-            
         } else {
             // Return existing ID
             http:Response resp = new;
@@ -672,7 +692,7 @@ service /auth on authListener {
             resp.setJsonPayload({ message: "You already have an account" });
             addCorsHeaders(resp);
             check caller->respond(resp);
-            }
+        }
     }
 
     resource function post logoutAdmin(http:Caller caller, http:Request req) returns error? {
@@ -745,7 +765,7 @@ service /auth on authListener {
             // Extract form fields
             string username = "";
             string password = "";
-            string email = "";
+            // string email = "";
             
             foreach mime:Entity part in bodyParts {
                 mime:ContentDisposition? cd = part.getContentDisposition();
@@ -765,12 +785,12 @@ service /auth on authListener {
                                 password = value;
                             }
                         }
-                        "email" => {
-                            var value = part.getText();
-                            if value is string {
-                                email = value.trim();
-                            }
-                        }
+                        // "email" => {
+                        //     var value = part.getText();
+                        //     if value is string {
+                        //         email = value.trim();
+                        //     }
+                        // }
                         // Ignore any unexpected parts.
                         _ => {
                             // Do nothing.
@@ -779,10 +799,10 @@ service /auth on authListener {
                 }
             }
 
-            if password == "" || (username == "" && email == "") {
+            if password == "" && username == "" {
                 http:Response resp = new;
                 resp.statusCode = 400;
-                resp.setJsonPayload({ message: "Missing required fields: password and either username or email" });
+                resp.setJsonPayload({ message: "Missing required fields: password and username" });
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
@@ -792,7 +812,7 @@ service /auth on authListener {
             
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
-            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { email: email });
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { password: hashedPassword });
             RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
 
             if matches.length() == 0 {
