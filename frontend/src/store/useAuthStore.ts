@@ -20,8 +20,8 @@ interface AuthState {
   isLoggingOut: boolean;
   
   // Actions
-  identifyAdmin: () => Promise<boolean>;
-  identifyRegisteredUser: () => Promise<boolean>;
+  identifyAdmin: () => Promise<any>;
+  identifyRegisteredUser: () => Promise<any>;
   checkAuth: () => Promise<void>;
   login: (credentials: { email: string; password: string }, userType: 'admin' | 'registered') => Promise<void>;
   logout: () => Promise<void>;
@@ -51,7 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (response.status === 401 || response.status === 403) {
           // User is not authenticated
           set({ isAdmin: false });
-          return false;
+          return { status: 'false' };
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -59,12 +59,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const result = await response.json();
       const isAdmin = result.status === 'true';
       set({ isAdmin });
-      return isAdmin;
+      return result;
     } catch (error) {
       console.error('Error identifying admin:', error);
       // On network error, assume not admin
       set({ isAdmin: false });
-      return false;
+      return { status: 'false' }; // Return a default object
     }
   },
 
@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (response.status === 401 || response.status === 403) {
           // User is not authenticated
           set({ isRegisteredUser: false });
-          return false;
+          return { status: 'false' };
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -88,22 +88,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const result = await response.json();
       const isRegistered = result.status === 'true';
       set({ isRegisteredUser: isRegistered });
-      return isRegistered;
+      return result;
     } catch (error) {
       console.error('Error identifying registered user:', error);
       // On network error, assume not registered
       set({ isRegisteredUser: false });
-      return false;
+      return { status: 'false' };
     }
   },
 
   checkAuth: async () => {
     try {
       // First check if user is admin
-      const isAdmin = await get().identifyAdmin();
-      if (isAdmin) {
+      const isAdminResult = await get().identifyAdmin();
+      if (isAdminResult.status === 'true') {
+        // Use the admin ID from the response
         set({
-          authUser: { id: 'admin', username: 'admin', role: 'admin' },
+          authUser: { id: isAdminResult.admin_user_id || 'admin-id-placeholder', username: 'admin', role: 'admin' },
           isAdmin: true,
           isRegisteredUser: false,
           isCheckingAuth: false
@@ -112,10 +113,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       // If not admin, check if registered user
-      const isRegistered = await get().identifyRegisteredUser();
-      if (isRegistered) {
+      const isRegisteredResult = await get().identifyRegisteredUser();
+      if (isRegisteredResult.status === 'true') {
+        // Use the registered user ID from the response
         set({
-          authUser: { id: 'registered', username: 'Registered User', role: 'registered' },
+          authUser: { id: isRegisteredResult.reg_user_id || 'registered-user-id-placeholder', username: 'Registered User', role: 'registered' },
           isAdmin: false,
           isRegisteredUser: true,
           isCheckingAuth: false
