@@ -93,6 +93,77 @@ service /auth on authListener {
         resp.statusCode = 200;
         check caller->respond(resp);
     }
+    resource function get identifyRegisteredUser(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "reg_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+
+        http:Response resp = new;
+
+        if cookie is http:Cookie {
+            // Return existing ID
+            resp.setJsonPayload({
+                message: "Existing registered user ID found",
+                reg_user_id: cookie.value,
+                status: "true"
+            });
+        } else {
+            // Add message body
+            resp.setJsonPayload({
+                message: "Registered user ID not found",
+                status: "false"
+            });
+        }
+
+        // Send response with CORS headers
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+    }
+    resource function get identifyAdmin(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "admin_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+
+        http:Response resp = new;
+
+        if cookie is http:Cookie {
+            // Return existing ID
+            resp.setJsonPayload({
+                message: "Existing admin user ID found",
+                admin_user_id: cookie.value,
+                status: "true"
+            });
+        } else {
+            // Add message body
+            resp.setJsonPayload({
+                message: "Admin user ID not found",
+                status: "false"
+            });
+        }
+
+        // Send response with CORS headers
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+    }
+
+
+
 
     // Create or confirm unregistered user based only on cookie ID
     resource function post createUnregisteredUser(http:Caller caller, http:Request req) returns error? {
@@ -348,43 +419,54 @@ service /auth on authListener {
         }
     }
 
-    resource function post logoutRegisteredUser(http:Caller caller, http:Request req) returns error? {
+    resource function post logout(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
-        http:Cookie? cookie = ();
+        
+        // Check for admin cookie first
+        http:Cookie? adminCookie = ();
         foreach http:Cookie c in cookies {
-            if c.name == "reg_user_id" {
-                cookie = c;
+            if c.name == "admin_user_id" {
+                adminCookie = c;
                 break;
             }
         }
+        
+        // Check for registered user cookie if no admin cookie found
+        http:Cookie? regCookie = ();
+        if adminCookie is () {
+            foreach http:Cookie c in cookies {
+                if c.name == "reg_user_id" {
+                    regCookie = c;
+                    break;
+                }
+            }
+        }
+        
         http:Response resp = new;
-        // Check if user is actually logged in
-        if cookie is () {
-            resp.statusCode = 400;
-            resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
+        
+        // Handle admin logout
+        if adminCookie is http:Cookie {
+            resp.setHeader("Set-Cookie", "admin_user_id=; Path=/; HttpOnly; Max-Age=0");
+            resp.statusCode = 200;
+            resp.setJsonPayload({ message: "Admin logout successful. Cookie removed." });
             addCorsHeaders(resp);
             check caller->respond(resp);
             return;
         }
         
-        // Remove the cookie by setting its maxAge to 0
-        // We create an expired cookie with the same attributes as the original
-        // to ensure the browser properly removes it
+        // Handle registered user logout
+        if regCookie is http:Cookie {
+            resp.setHeader("Set-Cookie", "reg_user_id=; Path=/; HttpOnly; Max-Age=0");
+            resp.statusCode = 200;
+            resp.setJsonPayload({ message: "Registered user logout successful. Cookie removed." });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
         
-        // http:Cookie expiredCookie = new (
-        //     name = "reg_user_id",
-        //     value = "",
-        //     path = "/",
-        //     httpOnly = true,
-            // maxAge = 0 // Instructs browser to delete immediately
-        // );
-        
-        // Also add a header to remove the cookie, which provides an additional way
-        // for the browser to remove the cookie
-        resp.setHeader("Set-Cookie", "reg_user_id=; Path=/; HttpOnly; Max-Age=0");
-        // resp.addCookie(expiredCookie);
-        resp.statusCode = 200;
-        resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
+        // No valid cookie found
+        resp.statusCode = 400;
+        resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
         addCorsHeaders(resp);
         check caller->respond(resp);
     }
@@ -713,46 +795,6 @@ service /auth on authListener {
         }
     }
 
-    resource function post logoutAdmin(http:Caller caller, http:Request req) returns error? {
-    http:Cookie[] cookies = req.getCookies();
-    http:Cookie? cookie = ();
-    foreach http:Cookie c in cookies {
-        if c.name == "admin_user_id" {
-            cookie = c;
-            break;
-        }
-    }
-    http:Response resp = new;
-    // Check if user is actually logged in
-    if cookie is () {
-        resp.statusCode = 400;
-        resp.setJsonPayload({ message: "No login cookie found. You are not logged in." });
-        addCorsHeaders(resp);
-        check caller->respond(resp);
-        return;
-    }
-    
-    // Remove the cookie by setting its maxAge to 0
-    // We create an expired cookie with the same attributes as the original
-    // to ensure the browser properly removes it
-    
-    // http:Cookie expiredCookie = new (
-    //     name = "reg_user_id",
-    //     value = "",
-    //     path = "/",
-    //     httpOnly = true,
-    //     maxAge = 0 // Instructs browser to delete immediately
-    // );
-    
-    // Also add a header to remove the cookie, which provides an additional way
-    // for the browser to remove the cookie
-    resp.setHeader("Set-Cookie", "admin_user_id=; Path=/; HttpOnly; Max-Age=0");
-    // resp.addCookie(expiredCookie);
-    resp.statusCode = 200;
-    resp.setJsonPayload({ message: "Logout successful. Cookie removed." });
-    addCorsHeaders(resp);
-    check caller->respond(resp);
-    }
 
     resource function post loginAdmin(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
