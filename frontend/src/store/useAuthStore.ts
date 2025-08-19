@@ -46,16 +46,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         credentials: 'include',
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        const isAdmin = result.status === 'true';
-        set({ isAdmin });
-        return isAdmin;
+      // Handle network errors
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // User is not authenticated
+          set({ isAdmin: false });
+          return false;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      set({ isAdmin: false });
-      return false;
+      
+      const result = await response.json();
+      const isAdmin = result.status === 'true';
+      set({ isAdmin });
+      return isAdmin;
     } catch (error) {
       console.error('Error identifying admin:', error);
+      // On network error, assume not admin
       set({ isAdmin: false });
       return false;
     }
@@ -68,16 +75,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         credentials: 'include',
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        const isRegistered = result.status === 'true';
-        set({ isRegisteredUser: isRegistered });
-        return isRegistered;
+      // Handle network errors
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // User is not authenticated
+          set({ isRegisteredUser: false });
+          return false;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      set({ isRegisteredUser: false });
-      return false;
+      
+      const result = await response.json();
+      const isRegistered = result.status === 'true';
+      set({ isRegisteredUser: isRegistered });
+      return isRegistered;
     } catch (error) {
       console.error('Error identifying registered user:', error);
+      // On network error, assume not registered
       set({ isRegisteredUser: false });
       return false;
     }
@@ -119,7 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error checking auth:', error);
       set({
-        authUser: null,
+        authUser: { id: 'unregistered', username: 'Guest', role: 'unregistered' },
         isAdmin: false,
         isRegisteredUser: false,
         isCheckingAuth: false
@@ -220,11 +234,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   reset: () => {
-    set({ 
-      authUser: null,
-      isAdmin: null,
-      isRegisteredUser: null,
-      isCheckingAuth: true
+    set({
+      authUser: { id: 'unregistered', username: 'Guest', role: 'unregistered' },
+      isAdmin: false,
+      isRegisteredUser: false,
+      isCheckingAuth: false
     });
   }
 }));

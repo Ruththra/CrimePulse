@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/useAuthStore';
 import crimeBackground from '@/assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { login, isLoggingIn } = useAuthStore();
 
   useEffect(() => {
     // Check backend connectivity
@@ -84,31 +86,7 @@ const Auth = () => {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        // Prepare data for backend using FormData
-        const formData = new FormData();
-        formData.append('email', signInData.email);
-        formData.append('password', signInData.password);
-        
-        const response = await fetch('http://localhost:8082/auth/loginRegisteredUser', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include'
-        });
-        const result = await response.json();
-
-        if (!response.ok) {
-          toast({
-            variant: "destructive",
-            title: "Sign In Failed",
-            description: result.message || 'Invalid credentials or server error.',
-          });
-        } else {
-          toast({
-            title: "Sign In Successful",
-            description: result.message || 'Welcome back to Crime Pulse!',
-          });
-          // Redirect logic here if needed
-        }
+        await login({ email: signInData.email, password: signInData.password }, 'registered');
       } catch (err: any) {
         toast({
           variant: "destructive",
@@ -190,6 +168,7 @@ const Auth = () => {
     }
   };
 
+
   return (
     <div 
       className="min-h-screen flex items-center justify-center py-20"
@@ -260,8 +239,18 @@ const Auth = () => {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <Button type="submit" className="btn-crime w-full">
-                  Sign In
+                <Button type="submit" className="btn-crime w-full" disabled={isLoggingIn}>
+                  {isLoggingIn ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
               </Button>
               <div className="mt-4 text-center">
                 <Button 

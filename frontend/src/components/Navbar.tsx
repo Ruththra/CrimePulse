@@ -1,18 +1,43 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import heartPulseLogo from '@/assets/heart-pulse-logo.png';
+import { useAuthStore } from "../store/useAuthStore";
+import { useEffect } from "react";
+
+
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+    const {
+      authUser,
+      isAdmin,
+      isRegisteredUser,
+      isCheckingAuth,
+      checkAuth
+    } = useAuthStore();
+  
+    useEffect(() => {
+      // Only check auth if we haven't checked yet
+      if (isCheckingAuth === true) {
+        checkAuth();
+      }
+    }, [checkAuth, isCheckingAuth]);
 
   const navLinks = [
     { name: 'FAQ', href: '/faq' },
     { name: 'Contacts', href: '/contacts' },
-    { name: 'Sign In', href: '/auth' },
-    { name: 'Profiles', href: '/profiles' },
+    
+    // ...(isRegisteredUser ? [{ name: 'Complaint', href: '/complaint' }] : []),
+    ...(isAdmin ? [
+      { name: 'Admin Home', href: '/admin/home' },
+      { name: 'Admin Complaints', href: '/admin/complaints' }
+    ] : []),
+    ...(authUser ? [{ name: 'Logout', href: '/logout' }] : [{ name: 'Sign In', href: '/auth' }]),
+    ...(isRegisteredUser ? [{ name: 'Profiles', href: '/profiles' }] : []),
+    // { name: 'Profiles', href: '/profiles' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -23,6 +48,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo - Left Side */}
           <div className="flex-shrink-0">
+
             <Link to="/" className="flex items-center space-x-2 group">
               <div className="relative">
                 <img 
