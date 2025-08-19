@@ -11,7 +11,7 @@ configurable string apiKey = ?;
         allowOrigins: ["*"]
     }
 }
-service /newsfeed on new http:Listener(8081) {
+service /newsfeed on new http:Listener(8083) {
 
     // GET /news – returns filtered crime news about Sri Lanka with images
     resource function get news() returns json|error {

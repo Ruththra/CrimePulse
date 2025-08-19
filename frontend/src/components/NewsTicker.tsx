@@ -16,7 +16,7 @@ const NewsFeed: React.FC = () => {
     // Function to fetch the news from the backend
     const fetchNews = async () => {
       try {
-        const response = await fetch('http://localhost:8081/newsfeed/news');
+        const response = await fetch('http://localhost:8083/newsfeed/news');
         if (!response.ok) {
           throw new Error('Failed to fetch news');
         }
