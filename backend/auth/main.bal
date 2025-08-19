@@ -39,7 +39,7 @@ service /auth on authListener {
     private final mongodb:Database accountsDb;
 
     function init() returns error? {
-    self.accountsDb = check mongoClient->getDatabase(DB_NAME);
+        self.accountsDb = check mongoClient->getDatabase(DB_NAME);
     }
 
     resource function get identify(http:Caller caller, http:Request req) returns error? {

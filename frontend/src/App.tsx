@@ -91,49 +91,51 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={!authUser || authUser.role === 'unregistered' ? <Auth /> : <Navigate to="/" />} />
-              <Route path="/logout" element={authUser ? <Logout /> : <Navigate to="/auth" />} />
-              <Route
-                path="/complaint"
-                element={
-                  isCheckingAuth ?
-                    <div className="flex items-center justify-center h-screen">
-                      <RingLoader color="#0de5be" loading={true} size={60} />
-                    </div> :
-                  isRegisteredUser ?
-                    <Complaint /> :
-                    <Navigate to="/auth" replace />
-                }
-              />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route
-                path="/profiles"
-                element={
-                  isCheckingAuth ?
-                    <div className="flex items-center justify-center h-screen">
-                      <RingLoader color="#0de5be" loading={true} size={60} />
-                    </div> :
-                  isRegisteredUser ?
-                    <Profiles /> :
-                    <Navigate to="/auth" replace />
-                }
-              />
-              <Route path="/admin/auth" element={!isAdmin ? <AdminAuth /> : <Navigate to="/admin/home" />} />
-              <Route path="/admin/home" element={isAdmin ? <AdminHome /> : <Navigate to="/admin/auth" />} />
-              <Route path="/admin/complaint/:id" element={isAdmin ? <AdminComplaint /> : <Navigate to="/admin/auth" />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Navbar />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={!authUser || authUser.role === 'unregistered' ? <Auth /> : <Navigate to="/" />} />
+                <Route path="/logout" element={authUser ? <Logout /> : <Navigate to="/auth" />} />
+                <Route
+                  path="/complaint"
+                  element={
+                    isCheckingAuth ?
+                      <div className="flex items-center justify-center h-screen">
+                        <RingLoader color="#0de5be" loading={true} size={60} />
+                      </div> :
+                    isRegisteredUser ?
+                      <Complaint /> :
+                      <Navigate to="/auth" replace />
+                  }
+                />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="/contacts" element={<Contacts />} />
+                <Route
+                  path="/profiles"
+                  element={
+                    isCheckingAuth ?
+                      <div className="flex items-center justify-center h-screen">
+                        <RingLoader color="#0de5be" loading={true} size={60} />
+                      </div> :
+                    isRegisteredUser ?
+                      <Profiles /> :
+                      <Navigate to="/auth" replace />
+                  }
+                />
+                <Route path="/admin/auth" element={!isAdmin ? <AdminAuth /> : <Navigate to="/admin/home" />} />
+                <Route path="/admin/home" element={isAdmin ? <AdminHome /> : <Navigate to="/admin/auth" />} />
+                <Route path="/admin/complaint/:id" element={isAdmin ? <AdminComplaint /> : <Navigate to="/admin/auth" />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
