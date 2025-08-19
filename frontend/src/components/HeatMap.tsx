@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { TrendingUp } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { darkMapStyles, lightMapStyles } from '../lib/mapStyles';
 
 // Complete Sri Lanka district data with accurate coordinates and crime data
 const districts = [
@@ -38,6 +40,24 @@ const HeatMap = () => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<typeof districts[0] | null>(null);
   const infoWindowsRef = useRef<google.maps.InfoWindow[]>([]);
+  const { theme } = useTheme();
+
+  // Function to generate info window content based on theme
+  const generateInfoWindowContent = (district: typeof districts[0], currentTheme: string | undefined) => {
+    const backgroundColor = currentTheme === 'dark' ? '#1e1e1e' : '#ffffff';
+    const textColor = currentTheme === 'dark' ? '#ffffff' : '#000000';
+    
+    return `
+      <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding: 12px; min-width: 200px; background: ${backgroundColor}; color: ${textColor};">
+        <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${district.name}</div>
+        <div style="font-size: 14px; margin-bottom: 4px;">${district.crimes} reported crimes</div>
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px;">
+          <span style="display: inline-block; width: 12px; height: 12px; border-radius: 9999px; background: ${district.color};"></span>
+          <span style="font-weight: 500;">${district.riskLevel} Risk</span>
+        </div>
+      </div>
+    `;
+  };
 
   useEffect(() => {
     const initMap = async () => {
@@ -57,21 +77,13 @@ const HeatMap = () => {
         await loader.load();
         
         if (mapRef.current) {
+          // Determine which styles to use based on the current theme
+          const mapStyles = theme === 'dark' ? darkMapStyles : lightMapStyles;
+          
           const googleMap = new google.maps.Map(mapRef.current, {
             center: { lat: 7.8731, lng: 80.7718 },
             zoom: 8,
-            styles: [
-              {
-                featureType: 'all',
-                elementType: 'geometry',
-                stylers: [{ color: '#f5f5f5' }]
-              },
-              {
-                featureType: 'water',
-                elementType: 'geometry',
-                stylers: [{ color: '#e9e9e9' }]
-              }
-            ]
+            styles: mapStyles
           });
 
           setMap(googleMap);
@@ -86,24 +98,15 @@ const HeatMap = () => {
                 scale: 12,
                 fillColor: district.color,
                 fillOpacity: 1,
-                strokeColor: '#ffffff',
+                strokeColor: theme === 'dark' ? '#ffffff' : '#000000',
                 strokeWeight: 2,
               },
               title: district.name
             });
 
-            // Create info window
+            // Create info window with theme-aware styling
             const infoWindow = new google.maps.InfoWindow({
-              content: `
-                <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding: 12px; min-width: 200px;">
-                  <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #1e293b;">${district.name}</div>
-                  <div style="font-size: 14px; color: #475569; margin-bottom: 4px;">${district.crimes} reported crimes</div>
-                  <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 9999px; background: ${district.color};"></span>
-                    <span style="font-weight: 500; color: #374151;">${district.riskLevel} Risk</span>
-                  </div>
-                </div>
-              `
+              content: generateInfoWindowContent(district, theme)
             });
 
             // Add circle for 1km radius
@@ -123,6 +126,8 @@ const HeatMap = () => {
               // Close all other info windows
               infoWindowsRef.current.forEach(iw => iw.close());
               
+              // Update info window content based on current theme
+              infoWindow.setContent(generateInfoWindowContent(district, theme));
               infoWindow.open(googleMap, marker);
               setSelectedDistrict(district);
             });
@@ -141,7 +146,23 @@ const HeatMap = () => {
       // Cleanup info windows
       infoWindowsRef.current.forEach(iw => iw.close());
     };
-  }, []);
+  }, [theme]);
+
+  // Update map styles when theme changes
+  useEffect(() => {
+    if (map) {
+      const mapStyles = theme === 'dark' ? darkMapStyles : lightMapStyles;
+      map.setOptions({ styles: mapStyles });
+    }
+    
+    // Update info window content when theme changes
+    if (selectedDistrict) {
+      const selectedIndex = districts.findIndex(d => d.name === selectedDistrict.name);
+      if (selectedIndex !== -1 && infoWindowsRef.current[selectedIndex]) {
+        infoWindowsRef.current[selectedIndex].setContent(generateInfoWindowContent(selectedDistrict, theme));
+      }
+    }
+  }, [theme, map, selectedDistrict]);
 
   const legend = (
     <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
