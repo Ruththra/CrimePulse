@@ -36,7 +36,7 @@ const Navbar = () => {
       { name: 'Admin Complaints', href: '/admin/complaints' }
     ] : []),
     ...(authUser ? [{ name: 'Logout', href: '/logout' }] : [{ name: 'Sign In', href: '/auth' }]),
-    ...(isRegisteredUser ? [{ name: 'Profiles', href: '/profiles' }] : []),
+    ...(true ? [{ name: 'Profiles', href: '/profiles' }] : []),
     // { name: 'Profiles', href: '/profiles' },
   ];
 
