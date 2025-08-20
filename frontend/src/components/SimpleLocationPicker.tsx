@@ -112,7 +112,7 @@ const SimpleLocationPicker = ({ onLocationSelect, initialLocation }: SimpleLocat
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
+        {/* <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
@@ -121,7 +121,7 @@ const SimpleLocationPicker = ({ onLocationSelect, initialLocation }: SimpleLocat
             value={locationInput}
             onChange={handleLocationInput}
           />
-        </div>
+        </div> */}
         <Button
           type="button"
           onClick={getCurrentLocation}

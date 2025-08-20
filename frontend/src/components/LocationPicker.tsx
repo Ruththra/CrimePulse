@@ -279,7 +279,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
+        {/* <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
           <Input
             id="location-search"
@@ -289,7 +289,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
-        </div>
+        </div> */}
         <Button
           type="button"
           onClick={getCurrentLocation}
@@ -317,7 +317,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
       />
       
       <p className="text-sm text-muted-foreground">
-        Search for a location above, click on the map, or drag the marker to select a precise location.
+         Click on the map, or drag the marker to select a precise location.
       </p>
     </div>
   );

@@ -302,7 +302,7 @@ const Complaint = () => {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="location">Location *</Label>
-                <Button
+                {/* <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -310,7 +310,7 @@ const Complaint = () => {
                   className="text-xs"
                 >
                   {useSimpleLocation ? "Use Advanced Map" : "Use Simple Location"}
-                </Button>
+                </Button> */}
               </div>
               
               {useSimpleLocation ? (
