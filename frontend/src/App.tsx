@@ -108,7 +108,8 @@ function App() {
                       <div className="flex items-center justify-center h-screen">
                         <RingLoader color="#0de5be" loading={true} size={60} />
                       </div> :
-                    isRegisteredUser ?
+                    // isRegisteredUser ?
+                        true ?
                       <Complaint /> :
                       <Navigate to="/auth" replace />
                   }

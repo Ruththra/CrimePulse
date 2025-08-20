@@ -239,7 +239,7 @@ const Profiles = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <h4 className="font-semibold">{report.id}</h4>
+                            <h4 className="font-semibold">{report.description}</h4>
                             <p className="text-sm text-muted-foreground">{report.category}</p>
                           </div>
                           <Badge className={`${getStatusColor(report)}/20 text-white border-0`}>
@@ -262,11 +262,11 @@ const Profiles = () => {
                           <Button size="sm" className="btn-outline-crime">
                             View Details
                           </Button>
-                          {report.pending && (
+                          {/* {report.pending && (
                             <Button size="sm" variant="outline">
                               Track Progress
                             </Button>
-                          )}
+                          )} */}
                         </div>
                       </CardContent>
                     </Card>
