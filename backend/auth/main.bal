@@ -93,6 +93,40 @@ service /auth on authListener {
         resp.statusCode = 200;
         check caller->respond(resp);
     }
+    resource function get identifyUnregisteredUser(http:Caller caller, http:Request req) returns error? {
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "unreg_user_id" {
+                cookie = c;
+                break;
+            }
+        }
+
+        http:Response resp = new;
+
+        if cookie is http:Cookie {
+            // Return existing ID
+            resp.setJsonPayload({
+                message: "Existing unregistered user ID found",
+                unreg_user_id: cookie.value,
+                status: "true"
+            });
+        } else {
+            // Add message body
+            resp.setJsonPayload({
+                message: "Unregistered user ID not found",
+                status: "false"
+            });
+        }
+
+        // Send response with CORS headers
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+    }
     resource function get identifyRegisteredUser(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie = ();

@@ -30,33 +30,57 @@ const Profiles = () => {
   const [recentReports, setRecentReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const fetchUserReports = async () => {
       try {
         setLoading(true);
         // Fetch reports from backend
-        const response = await fetch(`http://localhost:8081/complaints/getComplaintsOfID/${authUser?.id}`);
+        const response = await fetch(`http://localhost:8081/complaints/getComplaintsOfCreator?creator=${authUser?.id}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch reports');
+          console.log("I'm here",response.body)
+          console.log("I'm here",response)
+          if (response.statusText === "No complaints found") {
+            throw new Error("No complaints found for this user.");
+          }
+          else{
+            throw new Error('Failed to fetch reports');
+          }
         }
         const data = await response.json();
         
         // For now, we'll use all reports as recent reports
         // In a real implementation, we would filter by user ID
-        setRecentReports(data);
         
-        // Calculate statistics based on fetched data
-        const totalReports = data.length;
-        const resolvedCases = data.filter(report => report.resolved).length;
-        const pendingCases = data.filter(report => report.pending).length;
+        if (data.message === "No complaints found") {
+          // Handle error message from backend
+          const totalReports = 0;
+          const resolvedCases = 0;
+          const pendingCases = 0;
+          setError(data.message);
+          setUserStats({
+            totalReports,
+            resolvedCases,
+            pendingCases,
+            memberSince: "January 2024" // This would come from user data in a real implementation
+          });
+          return;
+        } else{
+          
+          setRecentReports(data);
+          // Calculate statistics based on fetched data
+          const totalReports = data.length;
+          const resolvedCases = data.filter(report => report.resolved).length;
+          const pendingCases = data.filter(report => report.pending).length;
+          setUserStats({
+            totalReports,
+            resolvedCases,
+            pendingCases,
+            memberSince: "January 2024" // This would come from user data in a real implementation
+          });
+        }
+
         
-        setUserStats({
-          totalReports,
-          resolvedCases,
-          pendingCases,
-          memberSince: "January 2024" // This would come from user data in a real implementation
-        });
       } catch (err) {
         setError(err.message);
       } finally {

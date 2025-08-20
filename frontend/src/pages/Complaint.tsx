@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { useToast } from '../hooks/use-toast';
 import crimeBackground from '../assets/crime-background.jpg';
+import { useAuthStore } from '@/store/useAuthStore';
+
 
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -23,6 +25,9 @@ const Complaint = () => {
     location: '',
     media: [] as File[]
   });
+  
+  const { authUser } = useAuthStore();
+  
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,7 +142,7 @@ const Complaint = () => {
         });
       }
 
-      const response = await fetch("http://localhost:8081/complaints/submit", {
+      const response = await fetch(`http://localhost:8081/complaints/submit?creator=${authUser?.id}`, {
         method: 'POST',
         body: formData,
         mode: 'cors',
