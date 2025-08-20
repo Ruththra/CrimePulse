@@ -10,6 +10,8 @@ import { useToast } from '../hooks/use-toast';
 import LocationPicker from '../components/LocationPicker';
 import SimpleLocationPicker from '../components/SimpleLocationPicker';
 import crimeBackground from '../assets/crime-background.jpg';
+import { useAuthStore } from '@/store/useAuthStore';
+
 
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -27,6 +29,9 @@ const Complaint = () => {
     longitude: null as number | null,
     media: [] as File[]
   });
+  
+  const { authUser } = useAuthStore();
+  
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,7 +167,7 @@ const Complaint = () => {
         console.log(key, value);
       }
 
-      const response = await fetch("http://localhost:8081/complaints/submit", {
+      const response = await fetch(`http://localhost:8081/complaints/submit?creator=${authUser?.id}`, {
         method: 'POST',
         body: formData,
         mode: 'cors',

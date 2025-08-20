@@ -14,6 +14,7 @@ interface AuthState {
   authUser: User | null;
   isAdmin: boolean | null;
   isRegisteredUser: boolean | null;
+  isUnregisteredUser: boolean | null;
   isCheckingAuth: boolean;
   isSigningUp: boolean;
   isLoggingIn: boolean;
@@ -22,6 +23,7 @@ interface AuthState {
   // Actions
   identifyAdmin: () => Promise<any>;
   identifyRegisteredUser: () => Promise<any>;
+  identifyUnregisteredUser: () => Promise<any>;
   checkAuth: () => Promise<void>;
   login: (credentials: { email: string; password: string }, userType: 'admin' | 'registered') => Promise<void>;
   logout: () => Promise<void>;
@@ -34,6 +36,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   authUser: null,
   isAdmin: null,
   isRegisteredUser: null,
+  isUnregisteredUser: null,
   isCheckingAuth: true,
   isSigningUp: false,
   isLoggingIn: false,
@@ -97,6 +100,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  identifyUnregisteredUser: async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/auth/identifyUnregisteredUser`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      // Handle network errors
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // User is not authenticated
+          set({ isUnregisteredUser: false });
+          return { status: 'false' };
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const isUnregistered = result.status === 'true';
+      set({ isUnregisteredUser: isUnregistered });
+      return result;
+    } catch (error) {
+      console.error('Error identifying unregistered user:', error);
+      // On network error, assume not unregistered
+      set({ isUnregisteredUser: false });
+      return { status: 'false' };
+    }
+  },
+
   checkAuth: async () => {
     try {
       // First check if user is admin
@@ -107,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           authUser: { id: isAdminResult.admin_user_id || 'admin-id-placeholder', username: 'admin', role: 'admin' },
           isAdmin: true,
           isRegisteredUser: false,
+          isUnregisteredUser: false,
           isCheckingAuth: false
         });
         return;
@@ -120,6 +153,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           authUser: { id: isRegisteredResult.reg_user_id || 'registered-user-id-placeholder', username: 'Registered User', role: 'registered' },
           isAdmin: false,
           isRegisteredUser: true,
+          isUnregisteredUser: false,
+          isCheckingAuth: false
+        });
+        return;
+      }
+      const isUnregisteredResult = await get().identifyUnregisteredUser();
+      if (isUnregisteredResult.status === 'true') {
+        // Use the unregistered user ID from the response
+        set({
+          authUser: { id: isUnregisteredResult.unreg_user_id || 'unregistered-user-id-placeholder', username: 'Unregistered User', role: 'unregistered' },
+          isAdmin: false,
+          isRegisteredUser: false,
+          isUnregisteredUser: true,
           isCheckingAuth: false
         });
         return;
