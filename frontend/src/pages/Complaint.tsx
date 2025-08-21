@@ -34,6 +34,7 @@ const Complaint = () => {
   
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [useSimpleLocation, setUseSimpleLocation] = useState(false);
   const { toast } = useToast();
@@ -128,7 +129,7 @@ const Complaint = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleConfirmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -140,7 +141,12 @@ const Complaint = () => {
       return;
     }
 
+    setShowConfirmation(true);
+  };
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
+    setShowConfirmation(false);
 
     // Prepare data for backend
     try {
@@ -227,7 +233,7 @@ const Complaint = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleConfirmSubmit} className="space-y-6">
             {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category">Crime Category *</Label>
@@ -483,6 +489,42 @@ const Complaint = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="card-crime border-blue-500/20">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <AlertTriangle className="h-6 w-6 mr-2" />
+              Confirm Complaint Submission
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to submit this complaint? Please verify all information is correct.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Once submitted, your complaint will be reviewed by authorities.
+            </p>
+            <div className="flex space-x-4">
+              <Button
+                onClick={() => setShowConfirmation(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                className="btn-crime flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Confirm'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
