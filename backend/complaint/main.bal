@@ -360,6 +360,7 @@ service /complaints on complaintListen {
     // Retrieves all complaints in the database
     resource function get getAllComplaints(http:Caller caller, http:Request req) returns error? {
         io:println("Retrieving all complaints");
+
         Complaint[] allComplaints = [];
         string[] collections = [
             COLLECTION_ASSAULT,
@@ -368,37 +369,71 @@ service /complaints on complaintListen {
             COLLECTION_THEFT,
             COLLECTION_OTHER
         ];
+
+        // Keywords for determining priority
+        string[] highPriorityKeywords = ["murder", "assault", "drugs", "kidnap", "cybercrime"];
+        string[] mediumPriorityKeywords = ["theft", "robbery", "fraud"];
+        // Anything else -> low priority
+
         foreach string colName in collections {
             mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
             stream<Complaint, error?> result = check complaints->find();
             Complaint[] tempList = check from Complaint c in result select c;
-            // Merge into allComplaints
             allComplaints = [...allComplaints, ...tempList];
         }
 
         json[] allComplaintsJson = [];
 
-        foreach Complaint c in allComplaints{
+        foreach Complaint c in allComplaints {
+            // Determine priority based on keywords in description (case-insensitive)
+            string priority = "low"; // default
+            string descLower = c.description.toLowerAscii();
+            foreach string kw in highPriorityKeywords {
+                if descLower.includes(kw) {
+                    priority = "high";
+                    break;
+                }
+            }
+            if priority != "high" {
+                foreach string kw in mediumPriorityKeywords {
+                    if descLower.includes(kw) {
+                        priority = "medium";
+                        break;
+                    }
+                }
+            }
+
+            // Determine status using verified, pending, resolved fields
+            string status = "pending"; // default
+            if c.verified {
+                status = "verified";
+            } else if c.pending {
+                status = "pending";
+            } else if c.resolved {
+                status = "rejected";
+            }
+
             json complaintJson = {
                 id: c.id,
                 category: c.category,
                 description: c.description,
-                date: c.date,
-                time: c.time,
                 location: c.location,
-                verified: c.verified,
-                pending: c.pending,
-                resolved: c.resolved
+                date: c.date,
+                priority: priority,
+                status: status
             };
+
             if c.mediaPath is string {
-                // complaintJson["mediaPath"] = c.mediaPath;
                 map<json> withMedia = <map<json>> complaintJson;
                 withMedia["mediaPath"] = c.mediaPath;
                 complaintJson = <json>withMedia;
             }
+
             allComplaintsJson.push(complaintJson);
         }
+
         http:Response resp = new;
+
         if allComplaints.length() == 0 {
             resp.statusCode = 404;
             resp.setJsonPayload({message: "No complaints found"});
@@ -406,8 +441,10 @@ service /complaints on complaintListen {
             resp.statusCode = 200;
             resp.setJsonPayload(allComplaintsJson);
         }
+
         check caller->respond(resp);
     }
+
 
     // Retrieves complaints by category
     resource function get getComplaintsByCategory(http:Caller caller, http:Request req) returns error? {
