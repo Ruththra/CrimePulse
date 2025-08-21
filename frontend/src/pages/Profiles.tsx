@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
 
 // Define the report type
 interface Report {
@@ -21,6 +22,7 @@ interface Report {
 
 const Profiles = () => {
   const { authUser } = useAuthStore();
+const navigate = useNavigate();
   const [userStats, setUserStats] = useState({
     totalReports: 0,
     resolvedCases: 0,
@@ -145,9 +147,9 @@ const Profiles = () => {
                 </div>
               </div>
 
-              <Button className="btn-crime w-full mt-6">
+              {/* <Button className="btn-crime w-full mt-6">
                 Edit Profile
-              </Button>
+              </Button> */}
             </div>
 
             {/* User Statistics */}
@@ -193,7 +195,7 @@ const Profiles = () => {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold flex items-center">
                   <FileText className="h-6 w-6 mr-2 text-primary" />
-                  Recent Reports
+                  Recent Complaints
                 </h3>
                 <Button className="btn-outline-crime">
                   View All
@@ -228,7 +230,7 @@ const Profiles = () => {
                   <p className="text-muted-foreground mb-6">
                     You haven't submitted any crime reports yet.
                   </p>
-                  <Button className="btn-crime">
+                  <Button className="btn-crime" onClick={() => navigate('/complaint')}>
                     Make Your First Report
                   </Button>
                 </div>
@@ -277,9 +279,9 @@ const Profiles = () => {
 
             {/* Quick Actions */}
             <div className="mt-8 grid md:grid-cols-2 gap-4">
-              <Button className="btn-crime h-16 text-lg">
+              <Button className="btn-crime h-16 text-lg" onClick={() => navigate('/complaint')}>
                 <FileText className="h-6 w-6 mr-3" />
-                New Report
+                New Complaint
               </Button>
               <Button className="btn-outline-crime h-16 text-lg">
                 <Shield className="h-6 w-6 mr-3" />
