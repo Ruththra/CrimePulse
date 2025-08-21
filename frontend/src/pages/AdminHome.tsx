@@ -8,15 +8,7 @@ import { Shield, Eye, LogOut, AlertTriangle, Clock, CheckCircle } from 'lucide-r
 import HeatMap from '../components/HeatMap';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
-
-// If the file exists elsewhere, update the path accordingly, for example:
-// import Piechart from '../components/ui/Piechart';
-// Or, if the file does not exist, create it in src/components/ui/Piechart3D.tsx with a basic export like below:
-
-// src/components/ui/Piechart3D.tsx
-// import React from 'react';
-// const Piechart3D = (props: any) => <div>Piechart3D Placeholder</div>;
-// export default Piechart3D;
+import ApexChart from '../components/ui/apex-chart3d';
 
 interface Complaint {
   id: string;
@@ -26,121 +18,75 @@ interface Complaint {
   date: string;
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'verified' | 'rejected';
-  reporterName: string;
+  mediaPath?: string; // optional if your backend returns media URLs
 }
-
-const mockComplaints: Complaint[] = [
-  {
-    id: '1',
-    category: 'Assault',
-    description: 'Physical altercation near Central Market',
-    location: 'Colombo Central Market',
-    date: '2024-01-15',
-    priority: 'high',
-    status: 'pending',
-    reporterName: 'John Doe'
-  },
-  {
-    id: '2',
-    category: 'Theft',
-    description: 'Mobile phone stolen from bus',
-    location: 'Kandy Road',
-    date: '2024-01-14',
-    priority: 'medium',
-    status: 'pending',
-    reporterName: 'Jane Smith'
-  },
-  {
-    id: '3',
-    category: 'Cybercrime',
-    description: 'Online banking fraud attempt',
-    location: 'Online',
-    date: '2024-01-13',
-    priority: 'high',
-    status: 'verified',
-    reporterName: 'Mike Johnson'
-  },
-  {
-    id: '4',
-    category: 'Missing Person',
-    description: 'Elderly person missing since morning',
-    location: 'Galle Face',
-    date: '2024-01-12',
-    priority: 'high',
-    status: 'pending',
-    reporterName: 'Sarah Wilson'
-  }
-];
-
-const ApexChart = () => {
-  const [state, setState] = useState<{
-    series: number[];
-    options: ApexOptions;
-  }>({
-    series: [14, 23, 21, 17, 15, 10, 12, 17, 21],
-    options: {
-      chart: {
-        type: 'polarArea',
-        width: '100%',
-        height: 400,
-      },
-      stroke: {
-        colors: ['#fff']
-      },
-      fill: {
-        opacity: 0.8
-      },
-      responsive: [
-        {
-          breakpoint: 1024,
-          options: {
-            chart: {
-              width: '100%',
-              height: 300,
-            },
-            legend: {
-              position: 'bottom'
-            }
-          }
-        },
-        {
-          breakpoint: 768,
-          options: {
-            chart: {
-              width: '100%',
-              height: 250,
-            },
-            legend: {
-              position: 'bottom'
-            }
-          }
-        },
-        {
-          breakpoint: 480,
-          options: {
-            chart: {
-              width: '100%',
-              height: 200,
-            },
-            legend: {
-              position: 'bottom'
-            }
-          }
-        }
-      ]
-    },
-  });
-
-  return (
-    <div className="apexchart-container">
-      <ReactApexChart options={state.options} series={state.series} type="polarArea" height={400} width="100%" />
-    </div>
-  );
-};
 
 const AdminHome = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const API_URL = 'http://localhost:8080/complaints/getAllComplaints'; // <--- Corrected backend URL
+
+  // Fetch complaints from backend
+  const fetchComplaints = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        // Try to get error message from response body
+        let errorMessage = `Error fetching complaints: ${response.status} ${response.statusText}`;
+        try {
+          const errorText = await response.text();
+          // Check if the response is JSON
+          if (errorText.startsWith('{') || errorText.startsWith('[')) {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else if (errorText.trim() !== '') {
+            // If it's not JSON but has content, use it as the error message
+            errorMessage = errorText;
+          }
+        } catch (parseError) {
+          // If parsing fails, we'll use the default error message
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        throw new Error(`Expected JSON response but got: ${responseText.substring(0, 100)}${responseText.length > 100 ? '...' : ''}`);
+      }
+
+      const data: Complaint[] = await response.json();
+
+      // Sort complaints by priority (high -> medium -> low) and then by date
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const sortedComplaints = data.sort((a, b) => {
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+
+      setComplaints(sortedComplaints);
+    } catch (error) {
+      console.error('Failed to fetch complaints:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check admin authentication
@@ -150,16 +96,7 @@ const AdminHome = () => {
       return;
     }
 
-    // Sort complaints by priority (high -> medium -> low) and then by date
-    const sortedComplaints = mockComplaints.sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      }
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-
-    setComplaints(sortedComplaints);
+    fetchComplaints();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -303,59 +240,75 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="hidden md:table-cell">ID</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Description</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
-                  <TableHead className="hidden md:table-cell">Reporter</TableHead>
-                  <TableHead className="hidden md:table-cell">Priority</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
+                {loading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-destructive"></div>
+                    <span className="ml-2">Loading complaints...</span>
+                  </div>
+                ) : error ? (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4 text-destructive text-center">
+                    <p>Error loading complaints: {error}</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => fetchComplaints()}
+                      className="mt-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="hidden md:table-cell">ID</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="hidden md:table-cell">Description</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="hidden md:table-cell">Date</TableHead>
+                        <TableHead className="hidden md:table-cell">Priority</TableHead>
+                        <TableHead className="hidden md:table-cell">Status</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
 
-              <TableBody>
-                {complaints.map((complaint) => (
-                  <TableRow key={complaint.id}>
-                    <TableCell className="hidden md:table-cell">{complaint.id}</TableCell>
-                    <TableCell>{complaint.category}</TableCell>
-                    <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
-                    <TableCell>{complaint.location}</TableCell>
-                    <TableCell className="hidden md:table-cell">{complaint.date}</TableCell>
-                    <TableCell className="hidden md:table-cell">{complaint.reporterName}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge className={getPriorityColor(complaint.priority)}>
-                        {complaint.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant="outline" className={getStatusColor(complaint.status)}>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(complaint.status)}
-                          <span>{complaint.status}</span>
-                        </div>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
-                        className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">View</span>
-                      </Button>
+                    <TableBody>
+                      {complaints.map((complaint) => (
+                        <TableRow key={complaint.id}>
+                          <TableCell className="hidden md:table-cell">{complaint.id}</TableCell>
+                          <TableCell>{complaint.category}</TableCell>
+                          <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
+                          <TableCell>{complaint.location}</TableCell>
+                          <TableCell className="hidden md:table-cell">{complaint.date}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge className={getPriorityColor(complaint.priority)}>
+                              {complaint.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="outline" className={getStatusColor(complaint.status)}>
+                              <div className="flex items-center space-x-1">
+                                {getStatusIcon(complaint.status)}
+                                <span>{complaint.status}</span>
+                              </div>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => navigate(`/admin/complaint/${complaint.id}`)}
+                              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">View</span>
+                            </Button>
 
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
 
               </div>
             </CardContent>
