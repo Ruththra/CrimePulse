@@ -47,7 +47,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
-    fullName: '', telephone: '', nic: '', password: '', confirmPassword: ''
+    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: ''
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
@@ -117,6 +117,12 @@ const Auth = () => {
       newErrors.nic = 'Please enter a valid Sri Lankan NIC number';
     }
 
+    if (!registerData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(registerData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
     if (!registerData.password) {
       newErrors.password = 'Password is required';
     } else if (registerData.password.length < 8) {
@@ -134,7 +140,7 @@ const Auth = () => {
         // Prepare data for backend using FormData
         const formData = new FormData();
         formData.append('username', registerData.fullName);
-        formData.append('email', ''); // Email field required by backend but not in form
+        formData.append('email', registerData.email);
         formData.append('phone', registerData.telephone);
         formData.append('icNumber', registerData.nic);
         formData.append('password', registerData.password);
@@ -312,6 +318,22 @@ const Auth = () => {
                     />
                   </div>
                   {errors.nic && <p className="text-sm text-destructive">{errors.nic}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      className="pl-10 input-crime"
+                      value={registerData.email}
+                      onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                    />
+                  </div>
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
