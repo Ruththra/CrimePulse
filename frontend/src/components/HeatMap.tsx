@@ -69,7 +69,9 @@ const HeatMap = () => {
                 elementType: 'geometry',
                 stylers: [{ color: '#e9e9e9' }]
               }
-            ]
+            ],
+            disableDefaultUI: true,
+            fullscreenControl: true
           });
 
           setMap(googleMap);

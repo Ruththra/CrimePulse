@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import crimeBackground from '@/assets/crime-background.jpg';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { useToast } from '../hooks/use-toast';
+import crimeBackground from '../assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -34,12 +34,19 @@ const Auth = () => {
     .then(data => {
       console.log('✅ Unregistered user ID ensured:', data);
     })
-    .catch(err => {
-      console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
-          fetch('http://localhost:8082/auth/identify', {
+    .catch(async (err) => {
+      console.log('❌ Error ensuring unreg_user_id cookie:', (err as Error).message);
+      try {
+        const retryRes = await fetch('http://localhost:8082/auth/identify', {
           method: 'GET',
           credentials: 'include'
-        })
+        });
+        if (!retryRes.ok) {
+          console.log('⚠️ Retry failed to ensure unreg_user_id cookie');
+        }
+      } catch (retryErr) {
+        console.log('❌ Retry error ensuring unreg_user_id cookie:', (retryErr as Error).message);
+      }
     });
   }, []);
   const [showPassword, setShowPassword] = useState(false);
@@ -109,11 +116,12 @@ const Auth = () => {
           });
           // Redirect logic here if needed
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
         toast({
           variant: "destructive",
           title: "Sign In Error",
-          description: err.message || 'An error occurred during signin.',
+          description: error.message || 'An error occurred during signin.',
         });
       }
     }
@@ -167,24 +175,22 @@ const Auth = () => {
           mode: 'cors',
           credentials: 'include'
         });
-        
-        if (!response.ok) {
-          const errorResult = await response.json();
-          throw new Error(errorResult.message || 'Failed to register user');
-        }
-        
         const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to register user');
+        }
 
         toast({
           title: "Registration Successful",
           description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
         });
         // Redirect logic here if needed
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
         toast({
           variant: "destructive",
           title: "Registration Error",
-          description: err.message || 'An error occurred during registration.',
+          description: error.message || 'An error occurred during registration.',
         });
       }
     }
@@ -371,10 +377,6 @@ const Auth = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Protected by advanced encryption</p>
-            <p className="text-xs mt-1">Your privacy and security are our priority</p>
-          </div>
         </div>
       </div>
     </div>
