@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,6 +10,7 @@ import crimeBackground from '../assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Check backend connectivity
@@ -49,6 +50,15 @@ const Auth = () => {
       }
     });
   }, []);
+
+  // Redirect to home if landed on Auth after logout
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fromLogout = params.get('fromLogout') || params.get('logout');
+    if (fromLogout && (fromLogout === 'true' || fromLogout === '1')) {
+      navigate('/', { replace: true });
+    }
+  }, [location.search, navigate]);
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({

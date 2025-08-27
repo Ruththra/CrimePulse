@@ -9,7 +9,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const navLinks = [
-    { name: 'FAQ', href: '/faq' },
+    { name: 'Home', href: '/' },
     { name: 'Contacts', href: '/contacts' },
     { name: 'Sign In', href: '/auth' },
     { name: 'Profiles', href: '/profiles' },
@@ -46,7 +46,7 @@ const Navbar = () => {
                   key={link.name}
                   to={link.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                    isActive(link.href)
+                    isActive(link.href) && link.href !== '/'
                       ? 'bg-primary text-primary-foreground shadow-glow'
                       : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
                   }`}
@@ -79,7 +79,7 @@ const Navbar = () => {
                   key={link.name}
                   to={link.href}
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
-                    isActive(link.href)
+                    isActive(link.href) && link.href !== '/'
                       ? 'bg-primary text-primary-foreground shadow-glow'
                       : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
                   }`}
