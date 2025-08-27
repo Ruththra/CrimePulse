@@ -46,9 +46,6 @@ dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "time"}
 ]
-modules = [
-	{org = "ballerina", packageName = "crypto", moduleName = "crypto"}
-]
 
 [[package]]
 org = "ballerina"
@@ -167,9 +164,6 @@ dependencies = [
 	{org = "ballerina", name = "lang.__internal"},
 	{org = "ballerina", name = "lang.object"}
 ]
-modules = [
-	{org = "ballerina", packageName = "lang.int", moduleName = "lang.int"}
-]
 
 [[package]]
 org = "ballerina"
@@ -182,9 +176,6 @@ name = "lang.regexp"
 version = "0.0.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
-]
-modules = [
-	{org = "ballerina", packageName = "lang.regexp", moduleName = "lang.regexp"}
 ]
 
 [[package]]
@@ -225,6 +216,9 @@ dependencies = [
 	{org = "ballerina", name = "lang.value"},
 	{org = "ballerina", name = "observe"}
 ]
+modules = [
+	{org = "ballerina", packageName = "log", moduleName = "log"}
+]
 
 [[package]]
 org = "ballerina"
@@ -235,9 +229,6 @@ dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.int"},
 	{org = "ballerina", name = "log"}
-]
-modules = [
-	{org = "ballerina", packageName = "mime", moduleName = "mime"}
 ]
 
 [[package]]
@@ -273,10 +264,11 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "task"
-version = "2.7.0"
+version = "2.11.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
-	{org = "ballerina", name = "time"}
+	{org = "ballerina", name = "time"},
+	{org = "ballerina", name = "uuid"}
 ]
 
 [[package]]
@@ -305,9 +297,6 @@ dependencies = [
 	{org = "ballerina", name = "lang.int"},
 	{org = "ballerina", name = "time"}
 ]
-modules = [
-	{org = "ballerina", packageName = "uuid", moduleName = "uuid"}
-]
 
 [[package]]
 org = "ballerinai"
@@ -322,34 +311,16 @@ modules = [
 ]
 
 [[package]]
-org = "ballerinax"
-name = "mongodb"
-version = "5.2.1"
-dependencies = [
-	{org = "ballerina", name = "crypto"},
-	{org = "ballerina", name = "jballerina.java"},
-	{org = "ballerina", name = "log"}
-]
-modules = [
-	{org = "ballerinax", packageName = "mongodb", moduleName = "mongodb"}
-]
-
-[[package]]
 org = "ruthra"
-name = "auth"
+name = "newsfeed"
 version = "0.1.0"
 dependencies = [
-	{org = "ballerina", name = "crypto"},
 	{org = "ballerina", name = "http"},
-	{org = "ballerina", name = "lang.int"},
-	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "lang.string"},
-	{org = "ballerina", name = "mime"},
-	{org = "ballerina", name = "uuid"},
-	{org = "ballerinai", name = "observe"},
-	{org = "ballerinax", name = "mongodb"}
+	{org = "ballerina", name = "log"},
+	{org = "ballerinai", name = "observe"}
 ]
 modules = [
-	{org = "ruthra", packageName = "auth", moduleName = "auth"}
+	{org = "ruthra", packageName = "newsfeed", moduleName = "newsfeed"}
 ]
 

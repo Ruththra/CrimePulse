@@ -7,7 +7,11 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { useToast } from '../hooks/use-toast';
+import LocationPicker from '../components/LocationPicker';
+import SimpleLocationPicker from '../components/SimpleLocationPicker';
 import crimeBackground from '../assets/crime-background.jpg';
+import { useAuthStore } from '@/store/useAuthStore';
+
 
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -21,11 +25,18 @@ const Complaint = () => {
     date: defaultDate,
     time: defaultTime,
     location: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     media: [] as File[]
   });
+  
+  const { authUser } = useAuthStore();
+  
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useSimpleLocation, setUseSimpleLocation] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -103,13 +114,22 @@ const Complaint = () => {
 
     if (!complaintData.location.trim()) {
       newErrors.location = 'Location is required';
+    } else if (!useSimpleLocation && (complaintData.latitude === null || complaintData.longitude === null)) {
+      newErrors.location = 'Please select a valid location on the map';
     }
+    console.log('Location validation:', {
+      location: complaintData.location,
+      latitude: complaintData.latitude,
+      longitude: complaintData.longitude,
+      useSimpleLocation,
+      hasError: !complaintData.location.trim() || (!useSimpleLocation && (complaintData.latitude === null || complaintData.longitude === null))
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleConfirmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -121,23 +141,39 @@ const Complaint = () => {
       return;
     }
 
+    setShowConfirmation(true);
+  };
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
+    setShowConfirmation(false);
 
     // Prepare data for backend
     try {
+      console.log('Submitting complaint data:', complaintData);
       const formData = new FormData();
       formData.append('category', complaintData.category);
       formData.append('description', complaintData.description);
       formData.append('date', complaintData.date);
       formData.append('time', complaintData.time);
       formData.append('location', complaintData.location);
+      if (complaintData.latitude !== null) {
+        formData.append('latitude', complaintData.latitude.toString());
+      }
+      if (complaintData.longitude !== null) {
+        formData.append('longitude', complaintData.longitude.toString());
+      }
       if (complaintData.media.length > 0) {
         complaintData.media.forEach((file, index) => {
           formData.append('media', file);
         });
       }
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
 
-      const response = await fetch("http://localhost:8081/complaints/submit", {
+      const response = await fetch(`http://localhost:8081/complaints/submit?creator=${authUser?.id}`, {
         method: 'POST',
         body: formData,
         mode: 'cors',
@@ -159,9 +195,11 @@ const Complaint = () => {
       setComplaintData({
         category: '',
         description: '',
-        date: '',
-        time: '',
+        date: defaultDate,
+        time: defaultTime,
         location: '',
+        latitude: null,
+        longitude: null,
         media: []
       });
     } catch (error:any) {
@@ -195,7 +233,7 @@ const Complaint = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleConfirmSubmit} className="space-y-6">
             {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category">Crime Category *</Label>
@@ -232,7 +270,7 @@ const Complaint = () => {
               </div>
               {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
             </div>
-
+            
             {/* Date and Time */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -268,18 +306,90 @@ const Complaint = () => {
 
             {/* Location */}
             <div className="space-y-2">
-              <Label htmlFor="location">Location *</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="location"
-                  type="text"
-                  placeholder="Enter the location where the incident occurred"
-                  className="pl-10 input-crime"
-                  value={complaintData.location}
-                  onChange={(e) => setComplaintData({...complaintData, location: e.target.value})}
-                />
+              <div className="flex justify-between items-center">
+                <Label htmlFor="location">Location *</Label>
+                {/* <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUseSimpleLocation(!useSimpleLocation)}
+                  className="text-xs"
+                >
+                  {useSimpleLocation ? "Use Advanced Map" : "Use Simple Location"}
+                </Button> */}
               </div>
+              
+              {useSimpleLocation ? (
+                <SimpleLocationPicker
+                  onLocationSelect={(location) => {
+                    console.log('Simple location selected:', location);
+                    setComplaintData({
+                      ...complaintData,
+                      location: location.address,
+                      latitude: location.lat,
+                      longitude: location.lng
+                    });
+                    // Clear any existing location errors
+                    if (errors.location) {
+                      setErrors(prev => {
+                        const newErrors = {...prev};
+                        delete newErrors.location;
+                        return newErrors;
+                      });
+                    }
+                    // Also update validation to ensure form can be submitted
+                    setErrors(prev => {
+                      const newErrors = {...prev};
+                      delete newErrors.location;
+                      return newErrors;
+                    });
+                  }}
+                  initialLocation={
+                    complaintData.location ?
+                    {
+                      lat: complaintData.latitude,
+                      lng: complaintData.longitude,
+                      address: complaintData.location
+                    } :
+                    undefined
+                  }
+                />
+              ) : (
+                <LocationPicker
+                  onLocationSelect={(location) => {
+                    console.log('Location selected in Complaint form:', location);
+                    setComplaintData({
+                      ...complaintData,
+                      location: location.address,
+                      latitude: location.lat,
+                      longitude: location.lng
+                    });
+                    // Clear any existing location errors
+                    if (errors.location) {
+                      setErrors(prev => {
+                        const newErrors = {...prev};
+                        delete newErrors.location;
+                        return newErrors;
+                      });
+                    }
+                    // Also update validation to ensure form can be submitted
+                    setErrors(prev => {
+                      const newErrors = {...prev};
+                      delete newErrors.location;
+                      return newErrors;
+                    });
+                  }}
+                  initialLocation={
+                    complaintData.location && complaintData.latitude !== null && complaintData.longitude !== null ?
+                    {
+                      lat: complaintData.latitude,
+                      lng: complaintData.longitude,
+                      address: complaintData.location
+                    } :
+                    undefined
+                  }
+                />
+              )}
               {errors.location && <p className="text-sm text-destructive">{errors.location}</p>}
             </div>
 
@@ -379,6 +489,42 @@ const Complaint = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="card-crime border-blue-500/20">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <AlertTriangle className="h-6 w-6 mr-2" />
+              Confirm Complaint Submission
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to submit this complaint? Please verify all information is correct.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Once submitted, your complaint will be reviewed by authorities.
+            </p>
+            <div className="flex space-x-4">
+              <Button
+                onClick={() => setShowConfirmation(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                className="btn-crime flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Confirm'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>

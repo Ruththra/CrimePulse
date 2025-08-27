@@ -11,8 +11,6 @@ const Home = () => {
       <br/>
       <br/>
       <br/>
-      {/* News Ticker */}
-      <NewsTicker />
       
       {/* Hero Section */}
       <div 
@@ -142,6 +140,13 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <br/>
+      <br/>
+      <br/>
+      {/* News Ticker */}
+      <NewsTicker />
+
     </div>
   );
 };

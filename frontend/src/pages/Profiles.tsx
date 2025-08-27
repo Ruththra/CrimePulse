@@ -1,47 +1,110 @@
+import { useState, useEffect } from 'react';
 import { User, Shield, FileText, Clock, Award, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
+
+// Define the report type
+interface Report {
+  id: string;
+  category: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  verified: boolean;
+  pending: boolean;
+  resolved: boolean;
+  mediaPath?: string;
+}
 
 const Profiles = () => {
-  const userStats = {
-    totalReports: 12,
-    resolvedCases: 8,
-    pendingCases: 4,
+  const { authUser } = useAuthStore();
+const navigate = useNavigate();
+  const [userStats, setUserStats] = useState({
+    totalReports: 0,
+    resolvedCases: 0,
+    pendingCases: 0,
     memberSince: "January 2024"
+  });
+  const [recentReports, setRecentReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchUserReports = async () => {
+      try {
+        setLoading(true);
+        // Fetch reports from backend
+        const response = await fetch(`http://localhost:8081/complaints/getComplaintsOfCreator?creator=${authUser?.id}`);
+        if (!response.ok) {
+          console.log("I'm here",response.body)
+          console.log("I'm here",response)
+          if (response.statusText === "No complaints found") {
+            throw new Error("No complaints found for this user.");
+          }
+          else{
+            throw new Error('Failed to fetch reports');
+          }
+        }
+        const data = await response.json();
+        
+        // For now, we'll use all reports as recent reports
+        // In a real implementation, we would filter by user ID
+        
+        if (data.message === "No complaints found") {
+          // Handle error message from backend
+          const totalReports = 0;
+          const resolvedCases = 0;
+          const pendingCases = 0;
+          setError(data.message);
+          setUserStats({
+            totalReports,
+            resolvedCases,
+            pendingCases,
+            memberSince: "January 2024" // This would come from user data in a real implementation
+          });
+          return;
+        } else{
+          
+          setRecentReports(data);
+          // Calculate statistics based on fetched data
+          const totalReports = data.length;
+          const resolvedCases = data.filter(report => report.resolved).length;
+          const pendingCases = data.filter(report => report.pending).length;
+          setUserStats({
+            totalReports,
+            resolvedCases,
+            pendingCases,
+            memberSince: "January 2024" // This would come from user data in a real implementation
+          });
+        }
+
+        
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserReports();
+  }, [authUser]);
+
+  const getStatusColor = (report: Report) => {
+    if (report.resolved) return "bg-green-500";
+    if (report.pending) return "bg-yellow-500";
+    if (report.verified) return "bg-blue-500";
+    return "bg-gray-500";
   };
-
-  const recentReports = [
-    {
-      id: "CP-123456",
-      category: "Theft",
-      status: "Resolved",
-      date: "2024-01-15",
-      location: "Colombo 03"
-    },
-    {
-      id: "CP-123457",
-      category: "Cybercrime",
-      status: "Under Investigation",
-      date: "2024-01-12",
-      location: "Kandy"
-    },
-    {
-      id: "CP-123458",
-      category: "Missing Person",
-      status: "Resolved",
-      date: "2024-01-10",
-      location: "Galle"
-    }
-  ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Resolved": return "bg-green-500";
-      case "Under Investigation": return "bg-yellow-500";
-      case "Pending": return "bg-red-500";
-      default: return "bg-gray-500";
-    }
+  
+  const getStatusText = (report: Report) => {
+    if (report.resolved) return "Resolved";
+    if (report.pending) return "Pending";
+    if (report.verified) return "Verified";
+    return "Submitted";
   };
 
   return (
@@ -84,9 +147,9 @@ const Profiles = () => {
                 </div>
               </div>
 
-              <Button className="btn-crime w-full mt-6">
+              {/* <Button className="btn-crime w-full mt-6">
                 Edit Profile
-              </Button>
+              </Button> */}
             </div>
 
             {/* User Statistics */}
@@ -132,72 +195,93 @@ const Profiles = () => {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold flex items-center">
                   <FileText className="h-6 w-6 mr-2 text-primary" />
-                  Recent Reports
+                  Recent Complaints
                 </h3>
                 <Button className="btn-outline-crime">
                   View All
                 </Button>
               </div>
 
-              <div className="space-y-4">
-                {recentReports.map((report) => (
-                  <Card key={report.id} className="border-border hover:shadow-glow transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="font-semibold">{report.id}</h4>
-                          <p className="text-sm text-muted-foreground">{report.category}</p>
-                        </div>
-                        <Badge className={`${getStatusColor(report.status)}/20 text-white border-0`}>
-                          {report.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {report.date}
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {report.location}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex space-x-2">
-                        <Button size="sm" className="btn-outline-crime">
-                          View Details
-                        </Button>
-                        {report.status === "Under Investigation" && (
-                          <Button size="sm" variant="outline">
-                            Track Progress
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {recentReports.length === 0 && (
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="flex justify-center mb-4">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Loading Reports...</h3>
+                  <p className="text-muted-foreground">
+                    Please wait while we fetch your reports.
+                  </p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 text-destructive mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Error Loading Reports</h3>
+                  <p className="text-muted-foreground mb-6">
+                    {error}
+                  </p>
+                  <Button className="btn-crime" onClick={() => window.location.reload()}>
+                    Try Again
+                  </Button>
+                </div>
+              ) : recentReports.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
                   <p className="text-muted-foreground mb-6">
                     You haven't submitted any crime reports yet.
                   </p>
-                  <Button className="btn-crime">
+                  <Button className="btn-crime" onClick={() => navigate('/complaint')}>
                     Make Your First Report
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentReports.map((report) => (
+                    <Card key={report.id} className="border-border hover:shadow-glow transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="font-semibold">{report.description}</h4>
+                            <p className="text-sm text-muted-foreground">{report.category}</p>
+                          </div>
+                          <Badge className={`${getStatusColor(report)}/20 text-white border-0`}>
+                            {getStatusText(report)}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {report.date}
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            {report.location}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex space-x-2">
+                          <Button size="sm" className="btn-outline-crime">
+                            View Details
+                          </Button>
+                          {/* {report.pending && (
+                            <Button size="sm" variant="outline">
+                              Track Progress
+                            </Button>
+                          )} */}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </div>
 
             {/* Quick Actions */}
             <div className="mt-8 grid md:grid-cols-2 gap-4">
-              <Button className="btn-crime h-16 text-lg">
+              <Button className="btn-crime h-16 text-lg" onClick={() => navigate('/complaint')}>
                 <FileText className="h-6 w-6 mr-3" />
-                New Report
+                New Complaint
               </Button>
               <Button className="btn-outline-crime h-16 text-lg">
                 <Shield className="h-6 w-6 mr-3" />

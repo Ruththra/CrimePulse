@@ -104,7 +104,7 @@ service /complaints on complaintListen {
     //     return check base64Encode(bytes);
     // }
 
-    resource function post submit(http:Caller caller, http:Request req) returns error? {
+    resource function post submit(http:Caller caller, http:Request req, string creator) returns error? {
 
         string id = uuid:createType4AsString();
         string mediaPath = "";// Initialize mediaPath to an empty string.
@@ -294,12 +294,16 @@ service /complaints on complaintListen {
 
         Complaint complaint = {
             id: id,
+            creator: creator,
             category: category,
             description: description,
             date: incidentDate,
             time: incidentTime,
             location: location,
-            mediaPath: mediaPresent ? mediaPath : ()
+            mediaPath: mediaPresent ? mediaPath : (),
+            verified: false,
+            pending: true, 
+            resolved: false
         };
 
     if category == "Assault"{
@@ -356,6 +360,7 @@ service /complaints on complaintListen {
     // Retrieves all complaints in the database
     resource function get getAllComplaints(http:Caller caller, http:Request req) returns error? {
         io:println("Retrieving all complaints");
+
         Complaint[] allComplaints = [];
         string[] collections = [
             COLLECTION_ASSAULT,
@@ -364,34 +369,71 @@ service /complaints on complaintListen {
             COLLECTION_THEFT,
             COLLECTION_OTHER
         ];
+
+        // Keywords for determining priority
+        string[] highPriorityKeywords = ["murder", "assault", "drugs", "kidnap", "cybercrime"];
+        string[] mediumPriorityKeywords = ["theft", "robbery", "fraud"];
+        // Anything else -> low priority
+
         foreach string colName in collections {
             mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
             stream<Complaint, error?> result = check complaints->find();
             Complaint[] tempList = check from Complaint c in result select c;
-            // Merge into allComplaints
             allComplaints = [...allComplaints, ...tempList];
         }
 
         json[] allComplaintsJson = [];
 
-        foreach Complaint c in allComplaints{
+        foreach Complaint c in allComplaints {
+            // Determine priority based on keywords in description (case-insensitive)
+            string priority = "low"; // default
+            string descLower = c.description.toLowerAscii();
+            foreach string kw in highPriorityKeywords {
+                if descLower.includes(kw) {
+                    priority = "high";
+                    break;
+                }
+            }
+            if priority != "high" {
+                foreach string kw in mediumPriorityKeywords {
+                    if descLower.includes(kw) {
+                        priority = "medium";
+                        break;
+                    }
+                }
+            }
+
+            // Determine status using verified, pending, resolved fields
+            string status = "pending"; // default
+            if c.verified {
+                status = "verified";
+            } else if c.pending {
+                status = "pending";
+            } else if c.resolved {
+                status = "rejected";
+            }
+
             json complaintJson = {
                 id: c.id,
                 category: c.category,
                 description: c.description,
+                location: c.location,
                 date: c.date,
-                time: c.time,
-                location: c.location
+                priority: priority,
+                status: status
             };
+
             if c.mediaPath is string {
-                // complaintJson["mediaPath"] = c.mediaPath;
                 map<json> withMedia = <map<json>> complaintJson;
                 withMedia["mediaPath"] = c.mediaPath;
                 complaintJson = <json>withMedia;
             }
+
             allComplaintsJson.push(complaintJson);
         }
+
         http:Response resp = new;
+
         if allComplaints.length() == 0 {
             resp.statusCode = 404;
             resp.setJsonPayload({message: "No complaints found"});
@@ -399,8 +441,10 @@ service /complaints on complaintListen {
             resp.statusCode = 200;
             resp.setJsonPayload(allComplaintsJson);
         }
+
         check caller->respond(resp);
     }
+
 
     // Retrieves complaints by category
     resource function get getComplaintsByCategory(http:Caller caller, http:Request req) returns error? {
@@ -433,7 +477,10 @@ service /complaints on complaintListen {
                 description: c.description,
                 date: c.date,
                 time: c.time,
-                location: c.location
+                location: c.location,
+                verified: c.verified,
+                pending: c.pending,
+                resolved: c.resolved
             };
             if c.mediaPath is string {
                 // complaintJson["mediaPath"] = c.mediaPath;
@@ -454,43 +501,44 @@ service /complaints on complaintListen {
         check caller->respond(resp);
     }
 
-    resource function get getComplaintAssault(http:Caller caller, http:Request req) returns error?{
-        io:println("Retrieving complaints for category: Assault");
-        mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_ASSAULT);
-        stream<Complaint, error?> result = check complaints->find();
-        Complaint[] found = check from Complaint c in result select c;
-        json[] foundJson = [];
-        foreach Complaint c in found {
-            json complaintJson = {
-                id: c.id,
-                category: c.category,
-                description: c.description,
-                date: c.date,
-                time: c.time,
-                location: c.location
-            };
-            if c.mediaPath is string {
-                // complaintJson["mediaPath"] = c.mediaPath;
-                map<json> withMedia = <map<json>> complaintJson;
-                withMedia["mediaPath"] = c.mediaPath;
-                complaintJson = <json>withMedia;
-            }
-            foundJson.push(complaintJson);
-        }
-        http:Response resp = new;
-        if found.length() == 0 {
-            resp.statusCode = 404;
-            resp.setJsonPayload({message: "No complaints found"});
-        } else {
-            resp.statusCode = 200;
-            resp.setJsonPayload(foundJson);
-        }
-        check caller->respond(resp);
+    // resource function get getComplaintAssault(http:Caller caller, http:Request req) returns error?{
+    //     io:println("Retrieving complaints for category: Assault");
+    //     mongodb:Collection complaints = check self.ComplaintsDb->getCollection(COLLECTION_ASSAULT);
+    //     stream<Complaint, error?> result = check complaints->find();
+    //     Complaint[] found = check from Complaint c in result select c;
+    //     json[] foundJson = [];
+    //     foreach Complaint c in found {
+    //         json complaintJson = {
+    //             id: c.id,
+    //             category: c.category,
+    //             description: c.description,
+    //             date: c.date,
+    //             time: c.time,
+    //             location: c.location
+    //         };
+    //         if c.mediaPath is string {
+    //             // complaintJson["mediaPath"] = c.mediaPath;
+    //             map<json> withMedia = <map<json>> complaintJson;
+    //             withMedia["mediaPath"] = c.mediaPath;
+    //             complaintJson = <json>withMedia;
+    //         }
+    //         foundJson.push(complaintJson);
+    //     }
+    //     http:Response resp = new;
+    //     if found.length() == 0 {
+    //         resp.statusCode = 404;
+    //         resp.setJsonPayload({message: "No complaints found"});
+    //     } else {
+    //         resp.statusCode = 200;
+    //         resp.setJsonPayload(foundJson);
+    //     }
+    //     check caller->respond(resp);
         
-    }
+    // }
 
-    // // Retrieves a single complaint by its ID
-    resource function get getComplaintsOfID(http:Caller caller, http:Request req, string id) returns error? {
+    // // Retrieves all complaints by creator
+    resource function get getComplaintsOfCreator(http:Caller caller, http:Request req, string creator) returns error? {
+        io:println("Retrieving complaints for creator: " + creator);
         string[] collections = [
             COLLECTION_ASSAULT,
             COLLECTION_CYBERCRIME,
@@ -498,49 +546,65 @@ service /complaints on complaintListen {
             COLLECTION_THEFT,
             COLLECTION_OTHER
         ];
+        Complaint[] allFoundComplaints = [];
+        
         foreach string colName in collections {
             mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
-            stream<Complaint, error?> result = check complaints->find({id: id});
+            stream<Complaint, error?> result = check complaints->find({creator: creator});
             Complaint[] found = check from Complaint c in result select c;
-            if found.length() == 1 {
-                Complaint c = found[0];
-                json complaintJson = {
-                    id: c.id,
-                    category: c.category,
-                    description: c.description,
-                    date: c.date,
-                    time: c.time,
-                    location: c.location
-                };
-                if c.mediaPath is string {
-                    map<json> withMedia = <map<json>> complaintJson;
-                    withMedia["mediaPath"] = c.mediaPath;
-                    complaintJson = <json>withMedia;
-                }
-                http:Response resp = new;
-                resp.statusCode = 200;
-                resp.setJsonPayload(complaintJson);
-                addCorsHeaders(resp);
-                check caller->respond(resp);
-                return;
-            }
+            // Add found complaints to the overall collection
+            allFoundComplaints = [...allFoundComplaints, ...found];
         }
-        http:Response notFoundResp = new;
-        notFoundResp.statusCode = 404;
-        notFoundResp.setJsonPayload({"message": "Complaint not found for id: " + id});
-        addCorsHeaders(notFoundResp);
-        check caller->respond(notFoundResp);
+        
+        // Convert all found complaints to JSON
+        json[] allFoundComplaintsJson = [];
+        foreach Complaint c in allFoundComplaints {
+            json complaintJson = {
+                id: c.id,
+                creator: c.creator,
+                category: c.category,
+                description: c.description,
+                date: c.date,
+                time: c.time,
+                location: c.location,
+                verified: c.verified,
+                pending: c.pending,
+                resolved: c.resolved
+            };
+            if c.mediaPath is string {
+                map<json> withMedia = <map<json>> complaintJson;
+                withMedia["mediaPath"] = c.mediaPath;
+                complaintJson = <json>withMedia;
+            }
+            allFoundComplaintsJson.push(complaintJson);
+        }
+        
+        http:Response resp = new;
+        if allFoundComplaints.length() == 0 {
+            resp.statusCode = 404;
+            resp.reasonPhrase = "No complaints found";
+            resp.setJsonPayload({message: "No complaints found"});
+        } else {
+            resp.statusCode = 200;
+            resp.setJsonPayload(allFoundComplaintsJson);
+        }
+        addCorsHeaders(resp);
+        check caller->respond(resp);
     }
 }
 
 public type Complaint record {
     readonly string id;
+    readonly string creator;
     string category;
     string description;
     string date;
     string time;
     string location;
     string? mediaPath; // optional
+    boolean verified;
+    boolean pending;
+    boolean resolved;
 };
 
 

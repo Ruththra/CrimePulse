@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
+
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,6 +11,7 @@ import crimeBackground from '../assets/crime-background.jpg';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { login, isLoggingIn } = useAuthStore();
 
   useEffect(() => {
     // Check backend connectivity
@@ -52,7 +54,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
-    fullName: '', telephone: '', nic: '', password: '', confirmPassword: ''
+    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: ''
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
@@ -91,6 +93,7 @@ const Auth = () => {
 
     if (Object.keys(newErrors).length === 0) {
       try {
+
         // Prepare data for backend using FormData
         const formData = new FormData();
         formData.append('email', signInData.email);
@@ -118,6 +121,7 @@ const Auth = () => {
         }
       } catch (err: unknown) {
         const error = err as Error;
+            
         toast({
           variant: "destructive",
           title: "Sign In Error",
@@ -147,6 +151,12 @@ const Auth = () => {
       newErrors.nic = 'Please enter a valid Sri Lankan NIC number';
     }
 
+    if (!registerData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(registerData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
     if (!registerData.password) {
       newErrors.password = 'Password is required';
     } else if (registerData.password.length < 8) {
@@ -164,7 +174,7 @@ const Auth = () => {
         // Prepare data for backend using FormData
         const formData = new FormData();
         formData.append('username', registerData.fullName);
-        formData.append('email', ''); // Email field required by backend but not in form
+        formData.append('email', registerData.email);
         formData.append('phone', registerData.telephone);
         formData.append('icNumber', registerData.nic);
         formData.append('password', registerData.password);
@@ -195,6 +205,7 @@ const Auth = () => {
       }
     }
   };
+
 
   return (
     <div 
@@ -266,8 +277,18 @@ const Auth = () => {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <Button type="submit" className="btn-crime w-full">
-                  Sign In
+                <Button type="submit" className="btn-crime w-full" disabled={isLoggingIn}>
+                  {isLoggingIn ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
               </Button>
               <div className="mt-4 text-center">
                 <Button 
@@ -329,6 +350,22 @@ const Auth = () => {
                     />
                   </div>
                   {errors.nic && <p className="text-sm text-destructive">{errors.nic}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      className="pl-10 input-crime"
+                      value={registerData.email}
+                      onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                    />
+                  </div>
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
