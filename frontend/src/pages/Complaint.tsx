@@ -284,7 +284,6 @@ const Complaint = () => {
                     value={complaintData.date}
                     onChange={(e) => setComplaintData({...complaintData, date: e.target.value})}
                     max={new Date().toISOString().split('T')[0]}
-                    defaultValue={defaultDate}
                   />
                 </div>
                 {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
@@ -298,7 +297,6 @@ const Complaint = () => {
                   className="input-crime"
                   value={complaintData.time}
                   onChange={(e) => setComplaintData({...complaintData, time: e.target.value})}
-                  defaultValue={defaultTime}
                 />
                 {errors.time && <p className="text-sm text-destructive">{errors.time}</p>}
               </div>

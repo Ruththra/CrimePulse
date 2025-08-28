@@ -40,7 +40,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
         const loader = new Loader({
           apiKey: apiKey,
           version: 'weekly',
-          libraries: ['maps', 'places']
+          libraries: ['maps', 'marker', 'places']
         });
 
         await loader.load();

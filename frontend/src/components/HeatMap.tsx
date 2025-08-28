@@ -70,7 +70,7 @@ const HeatMap = () => {
       const loader = new Loader({
         apiKey: apiKey,
         version: 'weekly',
-        libraries: ['maps', 'marker']
+        libraries: ['maps', 'marker', 'places']
       });
 
       try {
