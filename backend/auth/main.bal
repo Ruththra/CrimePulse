@@ -44,7 +44,115 @@ service /auth on authListener {
     }
 
     resource function get identifyProfile(http:Caller caller, http:Request req) returns error? {
-        
+        http:Cookie[] cookies = req.getCookies();
+        http:Response resp = new;
+
+        // Check for unregistered user cookie first
+        http:Cookie? unregCookie = ();
+        foreach http:Cookie c in cookies {
+            if c.name == "unreg_user_id" {
+                unregCookie = c;
+                break;
+            }
+        }
+
+        // Check for registered user cookie
+        http:Cookie? regCookie = ();
+        foreach http:Cookie c in cookies {
+            if c.name == "reg_user_id" {
+                regCookie = c;
+                break;
+            }
+        }
+
+        // Check for admin user cookie
+        http:Cookie? adminCookie = ();
+        foreach http:Cookie c in cookies {
+            if c.name == "admin_user_id" {
+                adminCookie = c;
+                break;
+            }
+        }
+
+        // Handle admin user (highest priority)
+        if adminCookie is http:Cookie {
+            mongodb:Collection adminUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
+            stream<RegisteredUser, error?> foundUsers = check adminUsersCol->find({ id: adminCookie.value });
+            RegisteredUser[] usersList = check from RegisteredUser u in foundUsers select u;
+
+            if usersList.length() > 0 {
+                RegisteredUser user = usersList[0];
+                resp.setJsonPayload({
+                    "userType": "admin",
+                    "username": user.username,
+                    "memberSince": user.memberSince,
+                    "id": user.id
+                });
+            } else {
+                resp.setJsonPayload({
+                    "userType": "admin",
+                    "error": "Admin user not found in database"
+                });
+                resp.statusCode = 404;
+            }
+        }
+        // Handle registered user (medium priority)
+        else if regCookie is http:Cookie {
+            mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
+            stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ id: regCookie.value });
+            RegisteredUser[] usersList = check from RegisteredUser u in foundUsers select u;
+
+            if usersList.length() > 0 {
+                RegisteredUser user = usersList[0];
+                resp.setJsonPayload({
+                    "userType": "registered",
+                    "memberSince": user.memberSince,
+                    "username": user.username,
+                    "email": user.email,
+                    "phone": user.phone,
+                    "icNumber": user.icNumber,
+                    "id": user.id
+                });
+            } else {
+                resp.setJsonPayload({
+                    "userType": "registered",
+                    "error": "User not found in database"
+                });
+                resp.statusCode = 404;
+            }
+        }
+        // Handle unregistered user (lowest priority)
+        else if unregCookie is http:Cookie {
+            mongodb:Collection unregUsersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
+            stream<map<json>, error?> foundUsers = check unregUsersCol->find({ id: unregCookie.value });
+            map<json>[] usersList = check from map<json> u in foundUsers select u;
+
+            if usersList.length() > 0 {
+                map<json> user = usersList[0];
+                resp.setJsonPayload({
+                    "userType": "unregistered",
+                    "memberSince": user["memberSince"],
+                    "id": user["id"]
+                });
+            } else {
+                resp.setJsonPayload({
+                    "userType": "unregistered",
+                    "memberSince": "Unknown",
+                    "id": unregCookie.value
+                });
+            }
+        }
+        // No valid cookie found
+        else {
+            resp.setJsonPayload({
+                "error": "No valid user cookie found",
+                "message": "Please log in or register first"
+            });
+            resp.statusCode = 401;
+        }
+
+        addCorsHeaders(resp);
+        check caller->respond(resp);
     }
 
     resource function get identify(http:Caller caller, http:Request req) returns error? {
@@ -83,7 +191,12 @@ service /auth on authListener {
 
             // Also store in database
             mongodb:Collection usersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
-            map<json> newUser = { id: newId };
+            // Record current date/time as memberSince in readable format (e.g., "10 January 2025")
+            time:Utc now = time:utcNow();
+            time:Civil civilTime = time:utcToCivil(now);
+            string monthName = getMonthName(civilTime.month);
+            string formattedNow = string `${civilTime.day} ${monthName} ${civilTime.year}`;
+            map<json> newUser = { id: newId, memberSince: formattedNow };
             check usersCol->insertOne(newUser);
 
             // Add message body
@@ -232,7 +345,12 @@ service /auth on authListener {
             );
 
             mongodb:Collection usersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
-            map<json> newUser = { id: newId };
+            // Record current date/time as memberSince in readable format (e.g., "10 January 2025")
+            time:Utc now = time:utcNow();
+            time:Civil civilTime = time:utcToCivil(now);
+            string monthName = getMonthName(civilTime.month);
+            string formattedNow = string `${civilTime.day} ${monthName} ${civilTime.year}`;
+            map<json> newUser = { id: newId, memberSince: formattedNow };
             check usersCol->insertOne(newUser);
             // Attach cookie to response
             resp.addCookie(newCookie);
