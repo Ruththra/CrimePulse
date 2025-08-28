@@ -37,9 +37,21 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
         });
         return;
       }
+      
+      // Check if API key is properly configured
+      if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey.length < 10) {
+        console.error('Google Maps API key is not properly configured');
+        toast({
+          title: "Configuration Error",
+          description: "Google Maps is not properly configured. Please contact support.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       try {
         console.log('Loading Google Maps with API key:', apiKey.substring(0, 10) + '...');
+        
         const loader = new Loader({
           apiKey: apiKey,
           version: 'weekly',
@@ -48,6 +60,17 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
 
         await loader.load();
         console.log('Google Maps loaded successfully');
+        
+        // Verify that required libraries are loaded
+        if (!window.google || !window.google.maps || !window.google.maps.places) {
+          console.error('Google Maps libraries not loaded properly');
+          toast({
+            title: "Map Error",
+            description: "Google Maps libraries are not loaded properly. Please refresh the page and try again.",
+            variant: "destructive"
+          });
+          return;
+        }
         
         if (mapRef.current) {
           // Default to Sri Lanka if no initial location
@@ -96,10 +119,43 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
 
           // Initialize autocomplete after a short delay to ensure DOM is ready
           setTimeout(() => {
+            // Check if Google Maps is loaded
+            if (typeof google === 'undefined' || !google.maps) {
+              console.error('Google Maps not loaded');
+              toast({
+                title: "Map Error",
+                description: "Google Maps is not loaded properly. Please refresh the page and try again.",
+                variant: "destructive"
+              });
+              return;
+            }
+            
             const input = document.getElementById('location-search') as HTMLInputElement;
             if (input) {
               console.log('Initializing autocomplete');
               try {
+                // Check if google.maps.places is available
+                if (!google.maps.places) {
+                  console.error('Google Maps Places library not loaded');
+                  toast({
+                    title: "Search Error",
+                    description: "Location search is not available. You can still click on the map to select a location.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                // Check if the API key has places API enabled
+                if (typeof google.maps.places.Autocomplete === 'undefined') {
+                  console.error('Google Maps Places Autocomplete not available');
+                  toast({
+                    title: "Search Error",
+                    description: "Location search is not properly configured. Please contact support.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
                 const autocomplete = new google.maps.places.Autocomplete(input, {
                   bounds: new google.maps.LatLngBounds(
                     new google.maps.LatLng(5.916667, 79.516667), // Southwest corner of Sri Lanka
@@ -127,6 +183,16 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
                   try {
                     const place = autocomplete.getPlace();
                     console.log('Place changed:', place);
+                    if (!place) {
+                      console.warn('No place returned from autocomplete');
+                      toast({
+                        title: "Location Error",
+                        description: "Could not retrieve location information. Please try again.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
                     if (!place.geometry || !place.geometry.location) {
                       console.warn('Place geometry not found');
                       toast({
@@ -149,13 +215,22 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
                     marker.setPosition(place.geometry.location);
                     setSearchInput(location.address);
                     onLocationSelect(location);
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error('Error in place_changed listener:', error);
-                    toast({
-                      title: "Selection Error",
-                      description: "Error processing selected location. Please try again.",
-                      variant: "destructive"
-                    });
+                    // Check if it's a Google Maps API error
+                    if (error.message && error.message.includes('Google')) {
+                      toast({
+                        title: "Google Maps Error",
+                        description: "There was an issue with Google Maps. Please try again later.",
+                        variant: "destructive"
+                      });
+                    } else {
+                      toast({
+                        title: "Selection Error",
+                        description: "Error processing selected location. Please try again.",
+                        variant: "destructive"
+                      });
+                    }
                   }
                 });
                 console.log('Autocomplete initialized successfully');
@@ -172,13 +247,22 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
             }
           }, 500);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading Google Maps:', error);
-        toast({
-          title: "Map Error",
-          description: "Failed to load map. Please check your internet connection and try again.",
-          variant: "destructive"
-        });
+        // Check if it's a billing error
+        if (error.message && error.message.includes('Billing')) {
+          toast({
+            title: "Map Error",
+            description: "Google Maps is not properly configured. Please contact support.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Map Error",
+            description: "Failed to load map. Please check your internet connection and try again.",
+            variant: "destructive"
+          });
+        }
       }
     };
 
@@ -193,6 +277,23 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
     };
   }, [initialLocation, toast, theme]);
   
+  // Automatically fetch current location when component mounts and no initial location is provided
+  useEffect(() => {
+    // Only fetch current location if no initial location is provided
+    if (!initialLocation) {
+      // Add a delay to ensure the map and Google Maps API are fully initialized
+      const timer = setTimeout(() => {
+        // Check if map is initialized before trying to get current location
+        if (mapInstanceRef.current && markerRef.current) {
+          getCurrentLocation();
+        }
+      }, 1500);
+      
+      // Clean up the timer
+      return () => clearTimeout(timer);
+    }
+  }, []); // Empty dependency array means this runs once when component mounts
+  
   // Update map styles when theme changes
   useEffect(() => {
     if (mapInstanceRef.current) {
@@ -205,8 +306,12 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
     // Update autocomplete input styling when theme changes
     const input = document.getElementById('location-search') as HTMLInputElement;
     if (input) {
-      input.style.color = theme === 'dark' ? '#ffffff' : '#000000';
-      input.style.backgroundColor = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+      // Check if we have a valid API key before trying to style
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+      if (apiKey && apiKey !== 'YOUR_API_KEY_HERE' && apiKey.length >= 10) {
+        input.style.color = theme === 'dark' ? '#ffffff' : '#000000';
+        input.style.backgroundColor = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+      }
     }
   }, [theme]);
 
@@ -215,6 +320,12 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
     if (!apiKey) {
       console.error('Google Maps API key not found for reverse geocoding');
+      return;
+    }
+    
+    // Check if API key is properly configured
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey.length < 10) {
+      console.error('Google Maps API key is not properly configured for reverse geocoding');
       return;
     }
 
@@ -252,6 +363,18 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
 
   // Get current location using Geolocation API
   const getCurrentLocation = () => {
+    // Check if API key is properly configured
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey.length < 10) {
+      console.error('Google Maps API key is not properly configured for geolocation');
+      toast({
+        title: "Configuration Error",
+        description: "Google Maps is not properly configured. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!navigator.geolocation) {
       console.warn('Geolocation is not supported by this browser');
       toast({
