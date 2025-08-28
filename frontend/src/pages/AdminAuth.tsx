@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Label } from '../components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Shield } from 'lucide-react';
 
 import { useToast } from '../hooks/use-toast';
@@ -35,6 +35,10 @@ const AdminAuth = () => {
     })
     .catch(err => {
       console.log('❌ Error ensuring unreg_user_id cookie:', err.message);
+          fetch('http://localhost:8082/auth/identify', {
+          method: 'GET',
+          credentials: 'include'
+        });
     });
   }, []);
 
@@ -77,43 +81,14 @@ const AdminAuth = () => {
     }
   };
 
-  const handle2FASubmit = async (e: React.FormEvent) => {
+  const handle2FASubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-      // Verify 2FA code with backend
-      const formData = new FormData();
-      formData.append('twoFACode', twoFACode);
-      
-      const response = await fetch('http://localhost:8082/auth/verify2FA', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        toast({
-          variant: "destructive",
-          title: "2FA Verification Failed",
-          description: result.message || 'Invalid 2FA code.',
-        });
-      } else {
-        toast({
-          title: "2FA Verification Successful",
-          description: result.message || 'Welcome to Crime Pulse Admin Panel!',
-        });
-        localStorage.setItem('adminAuth', 'true');
-        navigate('/admin/home');
-      }
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast({
-        variant: "destructive",
-        title: "2FA Verification Error",
-        description: error.message || 'An error occurred during 2FA verification.',
-      });
+    // Mock 2FA code check
+    if (twoFACode === '123456') {
+      localStorage.setItem('adminAuth', 'true');
+      navigate('/admin/home');
+    } else {
+      alert('Invalid 2FA code');
     }
   };
 

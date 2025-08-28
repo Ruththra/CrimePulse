@@ -83,22 +83,7 @@ const HeatMap = () => {
           const googleMap = new google.maps.Map(mapRef.current, {
             center: { lat: 7.8731, lng: 80.7718 },
             zoom: 8,
-
-            styles: [
-              {
-                featureType: 'all',
-                elementType: 'geometry',
-                stylers: [{ color: '#f5f5f5' }]
-              },
-              {
-                featureType: 'water',
-                elementType: 'geometry',
-                stylers: [{ color: '#e9e9e9' }]
-              }
-            ],
-            disableDefaultUI: true,
-            fullscreenControl: true
-
+            styles: mapStyles
           });
 
           setMap(googleMap);
