@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Navigation, Search } from 'lucide-react';
 import { Loader } from '@googlemaps/js-api-loader';
+import { useTheme } from 'next-themes';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { useToast } from '../hooks/use-toast';
+import { darkMapStyles, lightMapStyles } from '../lib/mapStyles';
 
 interface LocationPickerProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -19,6 +21,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchInput, setSearchInput] = useState(initialLocation?.address || '');
+  const { theme } = useTheme();
   const { toast } = useToast();
 
   // Initialize the map
@@ -52,12 +55,15 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
             ? { lat: initialLocation.lat, lng: initialLocation.lng }
             : { lat: 7.8731, lng: 80.7718 }; // Center of Sri Lanka
 
+          const mapStyles = theme === 'dark' ? darkMapStyles : lightMapStyles;
+          
           const map = new google.maps.Map(mapRef.current, {
             center: defaultCenter,
             zoom: 15,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
+            styles: mapStyles
           });
 
           mapInstanceRef.current = map;
@@ -102,6 +108,18 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
                   strictBounds: true,
                   fields: ["formatted_address", "geometry", "name"]
                 });
+                
+                // Set autocomplete styling based on theme
+                const autocompleteStyle = {
+                  color: theme === 'dark' ? '#ffffff' : '#000000',
+                  backgroundColor: theme === 'dark' ? '#1e1e1e' : '#ffffff'
+                };
+                
+                // Apply styling to the input element
+                if (input) {
+                  input.style.color = autocompleteStyle.color;
+                  input.style.backgroundColor = autocompleteStyle.backgroundColor;
+                }
                 
                 autocompleteRef.current = autocomplete;
                 
@@ -173,7 +191,24 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [initialLocation, toast]);
+  }, [initialLocation, toast, theme]);
+  
+  // Update map styles when theme changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const mapStyles = theme === 'dark' ? darkMapStyles : lightMapStyles;
+      mapInstanceRef.current.setOptions({ styles: mapStyles });
+    }
+    
+    // Note: Using default Google Maps marker which doesn't require theme-based styling
+    
+    // Update autocomplete input styling when theme changes
+    const input = document.getElementById('location-search') as HTMLInputElement;
+    if (input) {
+      input.style.color = theme === 'dark' ? '#ffffff' : '#000000';
+      input.style.backgroundColor = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+    }
+  }, [theme]);
 
   // Reverse geocode coordinates to get address
   const reverseGeocode = async (lat: number, lng: number) => {
@@ -279,7 +314,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        {/* <div className="relative flex-1">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
           <Input
             id="location-search"
@@ -289,7 +324,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }: LocationPickerPro
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
-        </div> */}
+        </div>
         <Button
           type="button"
           onClick={getCurrentLocation}
