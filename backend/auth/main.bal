@@ -199,103 +199,53 @@ service /auth on authListener {
 
 
 
-    
-        // Create or confirm unregistered user based only on cookie ID
-        resource function post createUnregisteredUser(http:Caller caller, http:Request req) returns error? {
-            
-            http:Cookie[] cookies = req.getCookies();
-            http:Cookie? cookie  = ();
-    
-            // Look for the cookie named "unreg_user_id"
-            foreach http:Cookie c in cookies {
-                if c.name == "unreg_user_id" {
-                    cookie = c;
-                    break;
-                }
+    // Create or confirm unregistered user based only on cookie ID
+    resource function post createUnregisteredUser(http:Caller caller, http:Request req) returns error? {
+        
+        http:Cookie[] cookies = req.getCookies();
+        http:Cookie? cookie  = ();
+
+        // Look for the cookie named "unreg_user_id"
+        foreach http:Cookie c in cookies {
+            if c.name == "unreg_user_id" {
+                cookie = c;
+                break;
             }
-    
-            // Parse multipart form data
-            mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
-            mime:Entity[] bodyParts = [];
-            if bodyPartsResult is mime:Entity[] {
-                bodyParts = bodyPartsResult;
-            } else {
-                http:Response errorResp = new;
-                errorResp.statusCode = 400;
-                errorResp.setJsonPayload({
-                    message: "Invalid multipart body"
-                });
-                addCorsHeaders(errorResp);
-                check caller->respond(errorResp);
-                return;
-            }
-            
-            // Extract form fields
-            string username = "";
-            string password = "";
-            
-            foreach mime:Entity part in bodyParts {
-                mime:ContentDisposition? cd = part.getContentDisposition();
-                string? partName = cd is mime:ContentDisposition ? cd.name : ();
-                
-                if partName is string {
-                    match partName {
-                        "username" => {
-                            var value = part.getText();
-                            if value is string {
-                                username = value.trim();
-                            }
-                        }
-                        "password" => {
-                            var value = part.getText();
-                            if value is string {
-                                password = value;
-                            }
-                        }
-                        // Ignore any unexpected parts.
-                        _ => {
-                            // Do nothing.
-                        }
-                    }
-                }
-            }
-    
-            http:Response resp = new;
-    
-            if cookie is () {
-                // Create new ID
-                string newId = uuid:createType4AsString();
-                http:Cookie newCookie = new (
-                    name = "unreg_user_id",
-                    value = newId,
-                    path = "/",
-                    httpOnly = true,
-                    maxAge = 60 * 60 * 24 * 365 // 1 year
-                );
-    
-                mongodb:Collection usersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
-                map<json> newUser = {
-                    id: newId,
-                    username: username,
-                    password: password
-                };
-                check usersCol->insertOne(newUser);
-                // Attach cookie to response
-                resp.addCookie(newCookie);
-    
-                // Add message body
-                resp.setTextPayload(string `New unregistered user ID created and cookie set: ${newId}`);
-            } else {
-                // Return existing ID
-                resp.setTextPayload(string `Existing unregistered user ID: ${cookie.value}`);
-            }
-    
-            // Send only ONE response
-            addCorsHeaders(resp);
-            resp.statusCode = 200;
-            check caller->respond(resp);
-            
         }
+
+        http:Response resp = new;
+
+        if cookie is () {
+            // Create new ID
+            string newId = uuid:createType4AsString();
+            http:Cookie newCookie = new (
+                name = "unreg_user_id",
+                value = newId,
+                path = "/",
+                httpOnly = true,
+                maxAge = 60 * 60 * 24 * 365 // 1 year
+            );
+
+            mongodb:Collection usersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
+            map<json> newUser = { id: newId };
+            check usersCol->insertOne(newUser);
+            // Attach cookie to response
+            resp.addCookie(newCookie);
+
+            // Add message body
+            resp.setTextPayload(string `New unregistered user ID created and cookie set: ${newId}`);
+        } else {
+            // Return existing ID
+            resp.setTextPayload(string `Existing unregistered user ID: ${cookie.value}`);
+        }
+
+        // Send only ONE response
+        addCorsHeaders(resp);
+        resp.statusCode = 200;
+        check caller->respond(resp);
+        
+    }
+
     resource function post createRegisteredUser(http:Caller caller, http:Request req) returns error? {
         // io:println("inside registered user...");
         http:Cookie[] cookies = req.getCookies();
@@ -471,8 +421,7 @@ service /auth on authListener {
                 password: hashedPassword,
                 email: email,
                 phone: phone,
-                icNumber: icNumber,
-                isVerified: false
+                icNumber: icNumber
             };
             // io:println("Inserting new user: ", newUser);
             check regUsersCol->insertOne(newUser);
@@ -848,8 +797,7 @@ service /auth on authListener {
                     password: hashedPassword,
                     email: email,
                     phone: phone,
-                    icNumber: icNumber,
-                    isVerified: true
+                    icNumber: icNumber
                 };
 
                 check regUsersCol->insertOne(newUser);
@@ -1073,7 +1021,6 @@ type RegisteredUser record {
     string email;
     string phone;
     string icNumber;
-    boolean isVerified;
 };
 
 
