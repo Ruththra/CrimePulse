@@ -127,9 +127,9 @@ const navigate = useNavigate();
                 </div>
                 <h2 className="text-xl font-bold">John Doe</h2>
                 <p className="text-muted-foreground">john.doe@email.com</p>
-                <Badge className="mt-2 bg-green-500/20 text-green-400 border-green-500/20">
+                {/* <Badge className="mt-2 bg-green-500/20 text-green-400 border-green-500/20">
                   Verified User
-                </Badge>
+                </Badge> */}
               </div>
 
               <div className="space-y-4">

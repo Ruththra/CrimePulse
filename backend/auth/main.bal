@@ -8,6 +8,7 @@ import ballerinax/mongodb;
 import ballerina/lang.regexp;
 import ballerina/crypto;
 import ballerina/lang.'int as int;
+import ballerina/time;
 
 configurable int PORT = ?;
 configurable string SERVER_URL = ?;
@@ -40,6 +41,10 @@ service /auth on authListener {
 
     function init() returns error? {
         self.accountsDb = check mongoClient->getDatabase(DB_NAME);
+    }
+
+    resource function get identifyProfile(http:Caller caller, http:Request req) returns error? {
+        
     }
 
     resource function get identify(http:Caller caller, http:Request req) returns error? {
@@ -415,13 +420,19 @@ service /auth on authListener {
             // Hash the password before saving
             string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
             // Create user record
+            // Record current date/time as memberSince in readable format (e.g., "10 January 2025")
+            time:Utc now = time:utcNow();
+            time:Civil civilTime = time:utcToCivil(now);
+            string monthName = getMonthName(civilTime.month);
+            string formattedNow = string `${civilTime.day} ${monthName} ${civilTime.year}`;
             RegisteredUser newUser = {
                 id: id,
                 username: username,
                 password: hashedPassword,
                 email: email,
                 phone: phone,
-                icNumber: icNumber
+                icNumber: icNumber,
+                memberSince: formattedNow
             };
             // io:println("Inserting new user: ", newUser);
             check regUsersCol->insertOne(newUser);
@@ -663,7 +674,7 @@ service /auth on authListener {
             string email = "";
             string phone = "";
             string icNumber = "";
-            
+
             foreach mime:Entity part in bodyParts {
                 mime:ContentDisposition? cd = part.getContentDisposition();
                 string? partName = cd is mime:ContentDisposition ? cd.name : ();
@@ -791,13 +802,19 @@ service /auth on authListener {
                 // Hash the password before saving
                 string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
                 // Create user record
+                // Record current date/time as memberSince in readable format (e.g., "10 January 2025")
+                time:Utc now = time:utcNow();
+                time:Civil civilTime = time:utcToCivil(now);
+                string monthName = getMonthName(civilTime.month);
+                string formattedNow = string `${civilTime.day} ${monthName} ${civilTime.year}`;
                 RegisteredUser newUser = {
                     id: id,
                     username: username,
                     password: hashedPassword,
                     email: email,
                     phone: phone,
-                    icNumber: icNumber
+                    icNumber: icNumber,
+                    memberSince: formattedNow
                 };
 
                 check regUsersCol->insertOne(newUser);
@@ -1021,8 +1038,27 @@ type RegisteredUser record {
     string email;
     string phone;
     string icNumber;
+    string memberSince;
 };
 
+
+function getMonthName(int month) returns string {
+    match month {
+        1 => { return "January"; }
+        2 => { return "February"; }
+        3 => { return "March"; }
+        4 => { return "April"; }
+        5 => { return "May"; }
+        6 => { return "June"; }
+        7 => { return "July"; }
+        8 => { return "August"; }
+        9 => { return "September"; }
+        10 => { return "October"; }
+        11 => { return "November"; }
+        12 => { return "December"; }
+        _ => { return "Unknown"; }
+    }
+}
 
 function addCorsHeaders(http:Response resp) {
     resp.setHeader("Access-Control-Allow-Origin", FRONTEND_AUTH_URL);
