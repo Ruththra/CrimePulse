@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate ,Link} from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, CreditCard, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +47,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
-    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: ''
+    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: '', agreePolicy: true
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
@@ -131,6 +131,10 @@ const Auth = () => {
     
     if (registerData.password !== registerData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!registerData.agreePolicy) {
+      newErrors.agreePolicy = 'You must agree to the Privacy Policy and Terms and Conditions';
     }
     
     setErrors(newErrors);
@@ -244,6 +248,37 @@ const Auth = () => {
                   </div>
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
+
+                <div className="flex items-start gap-2">
+                  <input
+                    id="agreePolicy"
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={registerData.agreePolicy}
+                    onChange={(e) => setRegisterData({ ...registerData, agreePolicy: e.target.checked })}
+                  />
+                  <Label htmlFor="agreePolicy" className="text-sm text-muted-foreground">
+                    I agree to the{' '}
+                    <a
+                      href="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Privacy Policy
+                    </a>{' '}and{' '}
+                    <a
+                      href="/terms-and-conditions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Terms and Conditions
+                    </a>
+                    .
+                  </Label>
+                </div>
+                {errors.agreePolicy && <p className="text-sm text-destructive">{errors.agreePolicy}</p>}
 
                 <Button type="submit" className="btn-crime w-full" disabled={isLoggingIn}>
                   {isLoggingIn ? (

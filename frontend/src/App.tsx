@@ -23,6 +23,8 @@ import Logout from "./pages/Logout";
 import NotFound from "./pages/NotFound";
 import { RingLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 const queryClient = new QueryClient();
 
@@ -132,6 +134,8 @@ function App() {
                 <Route path="/admin/home" element={isAdmin ? <AdminHome /> : <Navigate to="/admin/auth" />} />
                 <Route path="/admin/complaint/:id" element={isAdmin ? <AdminComplaint /> : <Navigate to="/admin/auth" />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
