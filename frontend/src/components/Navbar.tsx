@@ -32,7 +32,7 @@ const Navbar = () => {
     
     // ...(isRegisteredUser ? [{ name: 'Complaint', href: '/complaint' }] : []),
     ...(isAdmin ? [
-      { name: 'Admin Home', href: '/admin/home' },
+      { name: 'Dashboard', href: '/admin/home' },
       { name: 'Admin Complaints', href: '/admin/complaints' }
     ] : []),
     ...(isRegisteredUser||isAdmin ? [{ name: 'Logout', href: '/logout' }] : [{ name: 'Sign In', href: '/auth' }]),
@@ -49,7 +49,7 @@ const Navbar = () => {
           {/* Logo - Left Side */}
           <div className="flex-shrink-0">
 
-            <Link to="/" className="flex items-center space-x-2 group">
+            <Link to={isAdmin ? "/admin/home" : "/"} className="flex items-center space-x-2 group">
               <div className="relative">
                 <img 
                   src={heartPulseLogo} 
