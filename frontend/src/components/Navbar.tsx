@@ -27,7 +27,7 @@ const Navbar = () => {
     }, [checkAuth, isCheckingAuth]);
 
   const navLinks = [
-    { name: 'FAQ', href: '/faq' },
+    ...(!isAdmin ? [   { name: 'Home', href: '/' },] : []),
     { name: 'Contacts', href: '/contacts' },
     
     // ...(isRegisteredUser ? [{ name: 'Complaint', href: '/complaint' }] : []),
