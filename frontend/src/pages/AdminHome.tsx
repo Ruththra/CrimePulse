@@ -40,16 +40,36 @@ const AdminHome = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(API_URL, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
+      const response = await fetch(API_URL);
+      // const response = await fetch(API_URL, {
+      //   method: 'GET',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   credentials: 'include'
+      // });
+      console.log('Fetching complaints from:', API_URL);
 
       if (!response.ok) {
-        // Try to get error message from response body
+        // Handle 404 "No complaints found" as empty state, not error
+        if (response.status === 404) {
+          try {
+            const errorText = await response.text();
+            if (errorText.startsWith('{') || errorText.startsWith('[')) {
+              const errorData = JSON.parse(errorText);
+              if (errorData.message === "No complaints found") {
+                // Return empty array for "no complaints found" case
+                setComplaints([]);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (parseError) {
+            // If parsing fails, continue with normal error handling
+          }
+        }
+
+        // Try to get error message from response body for other errors
         let errorMessage = `Error fetching complaints: ${response.status} ${response.statusText}`;
         try {
           const errorText = await response.text();
@@ -174,7 +194,7 @@ const AdminHome = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Complaints</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{complaints.length}</div>
+              <div className="text-2xl font-bold text-foreground">{complaints.length || 0}</div>
             </CardContent>
           </Card>
           <Card className="bg-card/95 backdrop-blur-sm border-yellow-500/20">
@@ -183,7 +203,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {complaints.filter(c => c.pending === true).length}
+                {complaints.filter(c => c.pending === true).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -193,7 +213,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {complaints.filter(c => c.verified === true).length}
+                {complaints.filter(c => c.verified === true).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -203,7 +223,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                {complaints.filter(c => c.priority === 'high').length}
+                {complaints.filter(c => c.priority === 'high').length || 0}
               </div>
             </CardContent>
           </Card>
@@ -213,7 +233,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {complaints.filter(c => c.isRegisteredUser === true).length}
+                {complaints.filter(c => c.isRegisteredUser === true).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -272,6 +292,21 @@ const AdminHome = () => {
                       className="mt-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
                     >
                       Retry
+                    </Button>
+                  </div>
+                ) : complaints.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <Shield className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">No Complaints Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      There are currently no complaints in the system. New complaints will appear here when submitted.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => fetchComplaints()}
+                      className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      Refresh
                     </Button>
                   </div>
                 ) : (

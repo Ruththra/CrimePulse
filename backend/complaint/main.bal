@@ -43,23 +43,20 @@ listener http:Listener complaintListen = new (PORT);
 service /complaints on complaintListen {
     private final mongodb:Database ComplaintsDb;
 
-    // @http:ResourceConfig {
-    //     cors: {
-    //         allowOrigins: [FRONTEND_COMPLAINT_URL],
-    //         allowCredentials: true,
-    //         allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID" , "Access-Control-Allow-Origin"],
-    //         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    //         exposeHeaders: ["Content-Length", "ETag"]
-    //     }
-    // }
+    @http:ResourceConfig {
+        cors: corsConfig
+    }
 
     function init() returns error? {
         self.ComplaintsDb = check mongoClient->getDatabase(DB_NAME);
     }
 
 
-    resource function get hello() returns string {
-        return "Hello from Ballerina backend!";
+    resource function get hello(http:Caller caller, http:Request req) returns error? {
+        http:Response resp = new;
+        resp.setTextPayload("Hello from Ballerina backend!");
+        addCorsHeaders(resp);
+        check caller->respond(resp);
     }
 
 
@@ -400,36 +397,7 @@ service /complaints on complaintListen {
         json[] allComplaintsJson = [];
 
         foreach Complaint c in allComplaints {
-            // Determine status using verified, pending, resolved fields
-            string status = "pending"; // default
-            if c.verified {
-                status = "verified";
-            } else if c.pending {
-                status = "pending";
-            } else if c.resolved {
-                status = "rejected";
-            }
-
-            json complaintJson = {
-                id: c.id,
-                category: c.category,
-                description: c.description,
-                location: c.location,
-                date: c.date,
-                priority: c.priority,
-                verified: c.verified,
-                pending: c.pending,
-                resolved: c.resolved,
-                isRegisteredUser: c.isRegisteredUser,
-                status: status
-            };
-
-            if c.mediaPath is string {
-                map<json> withMedia = <map<json>> complaintJson;
-                withMedia["mediaPath"] = c.mediaPath;
-                complaintJson = <json>withMedia;
-            }
-
+            json complaintJson = complaintToJson(c);
             allComplaintsJson.push(complaintJson);
         }
 
@@ -443,6 +411,7 @@ service /complaints on complaintListen {
             resp.setJsonPayload(allComplaintsJson);
         }
 
+        addCorsHeaders(resp);
         check caller->respond(resp);
     }
 
@@ -454,6 +423,7 @@ service /complaints on complaintListen {
             http:Response resp = new;
             resp.statusCode = 400;
             resp.setJsonPayload({ "error": "Missing or empty 'category' query parameter" });
+            addCorsHeaders(resp);
             check caller->respond(resp);
             // return [];
         }
@@ -472,25 +442,7 @@ service /complaints on complaintListen {
         Complaint[] found = check from Complaint c in result select c;
         json[] foundJson = [];
         foreach Complaint c in found {
-            json complaintJson = {
-                id: c.id,
-                category: c.category,
-                description: c.description,
-                date: c.date,
-                time: c.time,
-                location: c.location,
-                verified: c.verified,
-                pending: c.pending,
-                resolved: c.resolved,
-                isRegisteredUser: c.isRegisteredUser,
-                priority: c.priority
-            };
-            if c.mediaPath is string {
-                // complaintJson["mediaPath"] = c.mediaPath;
-                map<json> withMedia = <map<json>> complaintJson;
-                withMedia["mediaPath"] = c.mediaPath;
-                complaintJson = <json>withMedia;
-            }
+            json complaintJson = complaintToJson(c);
             foundJson.push(complaintJson);
         }
         http:Response resp = new;
@@ -501,6 +453,7 @@ service /complaints on complaintListen {
             resp.statusCode = 200;
             resp.setJsonPayload(foundJson);
         }
+        addCorsHeaders(resp);
         check caller->respond(resp);
     }
 
@@ -562,25 +515,7 @@ service /complaints on complaintListen {
         // Convert all found complaints to JSON
         json[] allFoundComplaintsJson = [];
         foreach Complaint c in allFoundComplaints {
-            json complaintJson = {
-                id: c.id,
-                creator: c.creator,
-                category: c.category,
-                description: c.description,
-                date: c.date,
-                time: c.time,
-                location: c.location,
-                verified: c.verified,
-                pending: c.pending,
-                resolved: c.resolved,
-                isRegisteredUser: c.isRegisteredUser,
-                priority: c.priority
-            };
-            if c.mediaPath is string {
-                map<json> withMedia = <map<json>> complaintJson;
-                withMedia["mediaPath"] = c.mediaPath;
-                complaintJson = <json>withMedia;
-            }
+            json complaintJson = complaintToJson(c);
             allFoundComplaintsJson.push(complaintJson);
         }
         
@@ -613,6 +548,44 @@ public type Complaint record {
     boolean isRegisteredUser;
     string priority;
 };
+
+// Helper function to convert Complaint record to JSON consistently
+function complaintToJson(Complaint c) returns json {
+    // Determine status using verified, pending, resolved fields
+    string status = "pending"; // default
+    if c.verified {
+        status = "verified";
+    } else if c.pending {
+        status = "pending";
+    } else if c.resolved {
+        status = "resolved";
+    }
+
+    json complaintJson = {
+        id: c.id,
+        creator: c.creator,
+        category: c.category,
+        description: c.description,
+        date: c.date,
+        time: c.time,
+        location: c.location,
+        verified: c.verified,
+        pending: c.pending,
+        resolved: c.resolved,
+        isRegisteredUser: c.isRegisteredUser,
+        priority: c.priority,
+        status: status
+    };
+
+    // Handle optional mediaPath field
+    if c.mediaPath is string {
+        map<json> withMedia = <map<json>> complaintJson;
+        withMedia["mediaPath"] = c.mediaPath;
+        complaintJson = <json>withMedia;
+    }
+
+    return complaintJson;
+}
 
 
 function addCorsHeaders(http:Response resp) {

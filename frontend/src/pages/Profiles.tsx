@@ -86,7 +86,6 @@ const Profiles = () => {
         const response = await fetch(`http://localhost:8081/complaints/getComplaintsOfCreator?creator=${authUser?.id}`);
         if (!response.ok) {
           console.log("I'm here",response.body)
-          console.log("I'm here",response)
           if (response.statusText === "No complaints found") {
             throw new Error("No complaints found for this user.");
           }
@@ -94,6 +93,7 @@ const Profiles = () => {
             throw new Error('Failed to fetch reports');
           }
         }
+        console.log("I'm here",response)
         const data = await response.json();
 
         // For now, we'll use all reports as recent reports
