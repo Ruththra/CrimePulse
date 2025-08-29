@@ -14,6 +14,8 @@ import AdminAuth from "./pages/AdminAuth";
 import AdminHome from "./pages/AdminHome";
 import AdminComplaint from "./pages/AdminComplaint";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +37,8 @@ const App = () => (
           <Route path="/admin/home" element={<AdminHome />} />
           <Route path="/admin/complaint/:id" element={<AdminComplaint />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
