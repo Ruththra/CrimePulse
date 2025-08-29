@@ -13,11 +13,17 @@ import ApexChart from '../components/ui/apex-chart3d';
 interface Complaint {
   id: string;
   category: string;
+  creator: string;
   description: string;
   location: string;
   date: string;
+  time: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'verified' | 'rejected';
+  verified: boolean;
+  pending: boolean;
+  resolved: boolean;
+  isRegisteredUser: boolean;
+  // status: 'pending' | 'verified' | 'rejected';
   mediaPath?: string; // optional if your backend returns media URLs
 }
 
@@ -27,7 +33,7 @@ const AdminHome = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const API_URL = 'http://localhost:8080/complaints/getAllComplaints'; // <--- Corrected backend URL
+  const API_URL = 'http://localhost:8081/complaints/getAllComplaints'; // <--- Corrected backend URL
 
   // Fetch complaints from backend
   const fetchComplaints = async () => {
@@ -131,6 +137,13 @@ const AdminHome = () => {
     }
   };
 
+  const getComplaintStatus = (complaint: Complaint): string => {
+    if (complaint.pending) return 'pending';
+    if (complaint.resolved) return 'verified';
+    if (complaint.verified) return 'verified';
+    return 'rejected';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       {/* Header */}
@@ -155,7 +168,7 @@ const AdminHome = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Complaints</CardTitle>
@@ -170,7 +183,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {complaints.filter(c => c.status === 'pending').length}
+                {complaints.filter(c => c.pending === true).length}
               </div>
             </CardContent>
           </Card>
@@ -180,7 +193,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {complaints.filter(c => c.status === 'verified').length}
+                {complaints.filter(c => c.verified === true).length}
               </div>
             </CardContent>
           </Card>
@@ -194,15 +207,20 @@ const AdminHome = () => {
               </div>
             </CardContent>
           </Card>
+          <Card className="bg-card/95 backdrop-blur-sm border-blue-500/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Registered Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {complaints.filter(c => c.isRegisteredUser === true).length}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content: Heatmap left, ApexChart middle, Complaints right */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {/* ... Stats Cards remain unchanged ... */}
-          </div>
-
           {/* Top Section: HeatMap left, ApexChart right */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Heatmap Section */}
@@ -265,7 +283,10 @@ const AdminHome = () => {
                         <TableHead className="hidden md:table-cell">Description</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead className="hidden md:table-cell">Date</TableHead>
+                        <TableHead className="hidden md:table-cell">Time</TableHead>
+                        <TableHead className="hidden md:table-cell">Creator</TableHead>
                         <TableHead className="hidden md:table-cell">Priority</TableHead>
+                        <TableHead className="hidden md:table-cell">User Type</TableHead>
                         <TableHead className="hidden md:table-cell">Status</TableHead>
                         <TableHead>Action</TableHead>
                       </TableRow>
@@ -279,16 +300,27 @@ const AdminHome = () => {
                           <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
                           <TableCell>{complaint.location}</TableCell>
                           <TableCell className="hidden md:table-cell">{complaint.date}</TableCell>
+                          <TableCell className="hidden md:table-cell">{complaint.time}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-sm text-muted-foreground">
+                              {complaint.creator || 'Anonymous'}
+                            </span>
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">
                             <Badge className={getPriorityColor(complaint.priority)}>
                               {complaint.priority}
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Badge variant="outline" className={getStatusColor(complaint.status)}>
+                            <Badge variant="outline" className={complaint.isRegisteredUser ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-800 border-gray-200'}>
+                              {complaint.isRegisteredUser ? 'Registered' : 'Anonymous'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="outline" className={getStatusColor(getComplaintStatus(complaint))}>
                               <div className="flex items-center space-x-1">
-                                {getStatusIcon(complaint.status)}
-                                <span>{complaint.status}</span>
+                                {getStatusIcon(getComplaintStatus(complaint))}
+                                <span>{getComplaintStatus(complaint)}</span>
                               </div>
                             </Badge>
                           </TableCell>
@@ -314,8 +346,8 @@ const AdminHome = () => {
             </CardContent>
           </Card>
         </div>
-          </div>
-        </div>
+      </div>
+    </div>
   );
 };
 
