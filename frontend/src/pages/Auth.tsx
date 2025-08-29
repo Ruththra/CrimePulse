@@ -420,7 +420,7 @@ const Auth = () => {
           </Tabs>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Protected by advanced encryption</p>
+            {/* <p>Protected by advanced encryption</p> */}
             <p className="text-xs mt-1">Your privacy and security are our priority</p>
           </div>
         </div>

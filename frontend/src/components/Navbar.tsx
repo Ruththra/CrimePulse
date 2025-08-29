@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import heartPulseLogo from '@/assets/heart-pulse-logo.png';
 import { useAuthStore } from "../store/useAuthStore";
-import { useEffect } from "react";
 
 
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
     const {
       authUser,
       isAdmin,
@@ -25,6 +25,23 @@ const Navbar = () => {
         checkAuth();
       }
     }, [checkAuth, isCheckingAuth]);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const navLinks = [
     ...(!isAdmin ? [   { name: 'Home', href: '/' },] : []),
@@ -100,7 +117,7 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="lg:hidden">
+          <div className="lg:hidden" ref={mobileMenuRef}>
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-card border border-border rounded-lg mt-2 mb-4">
               {navLinks.map((link) => (
                 <Link
