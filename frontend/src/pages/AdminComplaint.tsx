@@ -105,6 +105,9 @@ const AdminComplaint = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
+        <br />
+        <br   />
+
         <div className="flex items-center justify-between mb-8">
           <Button 
             variant="outline" 

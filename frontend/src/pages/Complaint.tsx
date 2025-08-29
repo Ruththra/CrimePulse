@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Calendar, MapPin, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -19,6 +20,7 @@ import { useAuthStore } from '@/store/useAuthStore';
   const defaultTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
 const Complaint = () => {
+  const navigate = useNavigate();
   const [complaintData, setComplaintData] = useState({
     category: '',
     description: '',
@@ -547,7 +549,10 @@ const Complaint = () => {
               You will receive updates via SMS and email. Keep this reference number for future inquiries.
             </p>
             <Button
-              onClick={() => setShowSuccess(false)}
+              onClick={() => {
+                setShowSuccess(false);
+                navigate('/');
+              }}
               className="btn-crime w-full"
             >
               Continue
