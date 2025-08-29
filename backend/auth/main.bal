@@ -990,16 +990,16 @@ service /auth on authListener {
                 check caller->respond(errorResp);
                 return;
             }
-            
+
             // Extract form fields
             string username = "";
             string password = "";
             // string email = "";
-            
+
             foreach mime:Entity part in bodyParts {
                 mime:ContentDisposition? cd = part.getContentDisposition();
                 string? partName = cd is mime:ContentDisposition ? cd.name : ();
-                
+
                 if partName is string {
                     match partName {
                         "username" => {
@@ -1035,10 +1035,10 @@ service /auth on authListener {
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
-            
+
             // Hash password
             string hashedPassword = bytesToHex(crypto:hashSha256(password.toBytes()));
-            
+
             // Query by username or email
             mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
             stream<RegisteredUser, error?> foundUsers = check regUsersCol->find(username != "" ? { username: username } : { password: hashedPassword });
@@ -1059,20 +1059,28 @@ service /auth on authListener {
                 addCorsHeaders(resp);
                 check caller->respond(resp); return;
             }
-            // Create login cookie
-            http:Cookie loginCookieNew = new (
-                name = "admin_user_id",
-                value = user.id,
-                path = "/",
-                httpOnly = true,
-                maxAge = 60 * 60 * 24 * 365 // 1 year
-            );
+
+            // Generate 2FA code
+            string twoFactorCode = generateTwoFactorCode();
+            int expiryTime = time:utcNow()[0] + (5 * 60 * 1000000000); // 5 minutes from now
+
+            // Update user with 2FA code
+            mongodb:Update updateDoc = {
+                set: {
+                    "twoFactorCode": twoFactorCode,
+                    "twoFactorExpiry": expiryTime
+                }
+            };
+            mongodb:UpdateResult updateResult = check regUsersCol->updateOne({ id: user.id }, updateDoc);
+
             http:Response resp = new;
-            // Remove any existing unregistered user cookie
-            // resp.setHeader("Set-Cookie", "unreg_user_id=; Path=/; HttpOnly; Max-Age=0");
-            resp.addCookie(loginCookieNew);
             resp.statusCode = 200;
-            resp.setJsonPayload({ message: "Login successful", id: user.id });
+            resp.setJsonPayload({
+                message: "Login successful. Please verify 2FA code.",
+                id: user.id,
+                requiresTwoFactor: true,
+                twoFactorCode: twoFactorCode // For demo purposes - remove in production
+            });
             addCorsHeaders(resp);
             check caller->respond(resp);
 
@@ -1084,6 +1092,137 @@ service /auth on authListener {
             addCorsHeaders(resp);
             check caller->respond(resp); return;
         }
+    }
+
+    resource function post verifyAdmin2FA(http:Caller caller, http:Request req) returns error? {
+        // Parse multipart form data
+        mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
+        mime:Entity[] bodyParts = [];
+        if bodyPartsResult is mime:Entity[] {
+            bodyParts = bodyPartsResult;
+        } else {
+            http:Response errorResp = new;
+            errorResp.statusCode = 400;
+            errorResp.setJsonPayload({
+                message: "Invalid multipart body"
+            });
+            addCorsHeaders(errorResp);
+            check caller->respond(errorResp);
+            return;
+        }
+
+        // Extract form fields
+        string userId = "";
+        string twoFactorCode = "";
+
+        foreach mime:Entity part in bodyParts {
+            mime:ContentDisposition? cd = part.getContentDisposition();
+            string? partName = cd is mime:ContentDisposition ? cd.name : ();
+
+            if partName is string {
+                match partName {
+                    "userId" => {
+                        var value = part.getText();
+                        if value is string {
+                            userId = value.trim();
+                        }
+                    }
+                    "twoFactorCode" => {
+                        var value = part.getText();
+                        if value is string {
+                            twoFactorCode = value.trim();
+                        }
+                    }
+                    _ => {
+                        // Do nothing.
+                    }
+                }
+            }
+        }
+
+        if userId == "" || twoFactorCode == "" {
+            http:Response resp = new;
+            resp.statusCode = 400;
+            resp.setJsonPayload({ message: "Missing required fields: userId and twoFactorCode" });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
+
+        // Get admin user and verify 2FA code
+        mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
+        stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ id: userId });
+        RegisteredUser[] matches = check from RegisteredUser u in foundUsers select u;
+
+        if matches.length() == 0 {
+            http:Response resp = new;
+            resp.statusCode = 404;
+            resp.setJsonPayload({ message: "User not found" });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
+
+        RegisteredUser user = matches[0];
+
+        // Check if 2FA code exists and is valid
+        string? storedCode = user?.twoFactorCode;
+        int? expiryTime = user?.twoFactorExpiry;
+
+        if storedCode is () || expiryTime is () {
+            http:Response resp = new;
+            resp.statusCode = 400;
+            resp.setJsonPayload({ message: "2FA code not found or expired" });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
+
+        // Check if code has expired
+        int currentTime = time:utcNow()[0];
+        if currentTime > expiryTime {
+            http:Response resp = new;
+            resp.statusCode = 400;
+            resp.setJsonPayload({ message: "2FA code has expired" });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
+
+        // Verify the code
+        if storedCode != twoFactorCode {
+            http:Response resp = new;
+            resp.statusCode = 400;
+            resp.setJsonPayload({ message: "Invalid 2FA code" });
+            addCorsHeaders(resp);
+            check caller->respond(resp);
+            return;
+        }
+
+        // Clear 2FA code and set login cookie
+        mongodb:Update clearUpdate = {
+            'unset: {
+                "twoFactorCode": "",
+                "twoFactorExpiry": ""
+            }
+        };
+        mongodb:UpdateResult clearResult = check regUsersCol->updateOne({ id: user.id }, clearUpdate);
+
+        // Create login cookie
+        http:Cookie loginCookieNew = new (
+            name = "admin_user_id",
+            value = user.id,
+            path = "/",
+            httpOnly = true,
+            maxAge = 60 * 60 * 24 * 365 // 1 year
+        );
+
+        http:Response resp = new;
+        resp.addCookie(loginCookieNew);
+        resp.statusCode = 200;
+        resp.setJsonPayload({ message: "2FA verification successful. Login complete.", id: user.id });
+        addCorsHeaders(resp);
+        check caller->respond(resp);
     }
 
 
@@ -1149,6 +1288,21 @@ function bytesToHex(byte[] data) returns string {
     return hexStr;
 }
 
+// Generate a 6-digit 2FA code
+function generateTwoFactorCode() returns string {
+    // Use timestamp and some randomness for demo purposes
+    int timestamp = time:utcNow()[0];
+    int randomPart = timestamp % 1000000;
+    // Ensure it's 6 digits
+    string code = string `${randomPart}`;
+    if code.length() < 6 {
+        code = "000000".substring(0, 6 - code.length()) + code;
+    } else if code.length() > 6 {
+        code = code.substring(code.length() - 6);
+    }
+    return code;
+}
+
 type RegisteredUser record {
     string id;
     string username;
@@ -1157,6 +1311,8 @@ type RegisteredUser record {
     string phone;
     string icNumber;
     string memberSince;
+    string? twoFactorCode?;
+    int? twoFactorExpiry?;
 };
 
 

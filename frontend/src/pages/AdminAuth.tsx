@@ -21,6 +21,8 @@ const AdminAuth = () => {
   // Removed: const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [show2FA, setShow2FA] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
+  const [userId, setUserId] = useState('');
+  const [expectedTwoFACode, setExpectedTwoFACode] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,11 +68,23 @@ const AdminAuth = () => {
           description: result.message || 'Invalid credentials or server error.',
         });
       } else {
-        toast({
-          title: "Sign In Successful",
-          description: result.message || 'Welcome to Crime Pulse Admin Panel!',
-        });
-        setShow2FA(true);
+        if (result.requiresTwoFactor) {
+          toast({
+            title: "Sign In Successful",
+            description: result.message || 'Please enter your 2FA code.',
+          });
+          setUserId(result.id);
+          setExpectedTwoFACode(result.twoFactorCode || ''); // For demo purposes
+          setShow2FA(true);
+        } else {
+          // Fallback for old response format
+          toast({
+            title: "Sign In Successful",
+            description: result.message || 'Welcome to Crime Pulse Admin Panel!',
+          });
+          localStorage.setItem('adminAuth', 'true');
+          navigate('/admin/home');
+        }
       }
     } catch (err: any) {
       toast({
@@ -81,14 +95,43 @@ const AdminAuth = () => {
     }
   };
 
-  const handle2FASubmit = (e: React.FormEvent) => {
+  const handle2FASubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock 2FA code check
-    if (twoFACode === '123456') {
-      localStorage.setItem('adminAuth', 'true');
-      navigate('/admin/home');
-    } else {
-      alert('Invalid 2FA code');
+
+    try {
+      // Prepare data for backend using FormData
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('twoFactorCode', twoFACode);
+
+      const response = await fetch('http://localhost:8082/auth/verifyAdmin2FA', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          variant: "destructive",
+          title: "2FA Verification Failed",
+          description: result.message || 'Invalid 2FA code.',
+        });
+      } else {
+        toast({
+          title: "Login Successful",
+          description: result.message || 'Welcome to Crime Pulse Admin Panel!',
+        });
+        localStorage.setItem('adminAuth', 'true');
+        navigate('/admin/home');
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "2FA Verification Error",
+        description: err.message || 'An error occurred during 2FA verification.',
+      });
     }
   };
 
@@ -159,9 +202,14 @@ const AdminAuth = () => {
                     className="bg-background/50 border-border"
                     required
                   />
+                  {expectedTwoFACode && (
+                    <p className="text-sm text-muted-foreground">
+                      Demo: Use code: <span className="font-mono font-bold text-foreground">{expectedTwoFACode}</span>
+                    </p>
+                  )}
                 </div>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Verify 2FA
