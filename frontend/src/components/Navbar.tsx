@@ -28,15 +28,17 @@ const Navbar = () => {
 
   const navLinks = [
     ...(!isAdmin ? [   { name: 'Home', href: '/' },] : []),
-    { name: 'Contacts', href: '/contacts' },
+
     
     // ...(isRegisteredUser ? [{ name: 'Complaint', href: '/complaint' }] : []),
     ...(isAdmin ? [
       { name: 'Dashboard', href: '/admin/home' },
       { name: 'Admin Complaints', href: '/admin/complaints' }
     ] : []),
+      { name: 'Contacts', href: '/contacts' },
+     ...(true ? [{ name: 'Profiles', href: '/profiles' }] : []),
     ...(isRegisteredUser||isAdmin ? [{ name: 'Logout', href: '/logout' }] : [{ name: 'Sign In', href: '/auth' }]),
-    ...(true ? [{ name: 'Profiles', href: '/profiles' }] : []),
+ 
     // { name: 'Profiles', href: '/profiles' },
   ];
 

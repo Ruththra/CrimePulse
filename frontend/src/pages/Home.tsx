@@ -142,9 +142,6 @@ const Home = () => {
         </div>
       </section>
 
-      <br/>
-      <br/>
-      <br/>
       {/* News Ticker */}
       <NewsTicker />
 
