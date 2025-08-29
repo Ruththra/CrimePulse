@@ -167,7 +167,9 @@ const Auth = () => {
           title: "Registration Successful",
           description: result.message || 'Welcome to Crime Pulse! You can now report crimes.',
         });
-        // Redirect logic here if needed
+        
+        // Redirect to home page after successful registration
+        window.location.reload();
       } catch (err: any) {
         toast({
           variant: "destructive",

@@ -124,6 +124,7 @@ const AdminAuth = () => {
           description: result.message || 'Welcome to Crime Pulse Admin Panel!',
         });
         localStorage.setItem('adminAuth', 'true');
+        window.location.reload();
         navigate('/admin/home');
       }
     } catch (err: any) {
