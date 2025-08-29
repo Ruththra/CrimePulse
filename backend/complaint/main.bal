@@ -292,6 +292,23 @@ service /complaints on complaintListen {
         });
 
 
+        // Determine priority based on category
+        string priority = "low"; // default
+        match category {
+            "Assault" | "MissingPerson" => {
+                priority = "high";
+            }
+            "Theft" => {
+                priority = "medium";
+            }
+            "CyberCrime" | "Other" => {
+                priority = "low";
+            }
+        }
+
+        // Determine if user is registered (creator is not empty)
+        boolean isRegisteredUser = creator.trim() != "";
+
         Complaint complaint = {
             id: id,
             creator: creator,
@@ -302,8 +319,10 @@ service /complaints on complaintListen {
             location: location,
             mediaPath: mediaPresent ? mediaPath : (),
             verified: false,
-            pending: true, 
-            resolved: false
+            pending: true,
+            resolved: false,
+            isRegisteredUser: isRegisteredUser,
+            priority: priority
         };
 
     if category == "Assault"{
@@ -370,10 +389,6 @@ service /complaints on complaintListen {
             COLLECTION_OTHER
         ];
 
-        // Keywords for determining priority
-        string[] highPriorityKeywords = ["murder", "assault", "drugs", "kidnap", "cybercrime"];
-        string[] mediumPriorityKeywords = ["theft", "robbery", "fraud"];
-        // Anything else -> low priority
 
         foreach string colName in collections {
             mongodb:Collection complaints = check self.ComplaintsDb->getCollection(colName);
@@ -385,24 +400,6 @@ service /complaints on complaintListen {
         json[] allComplaintsJson = [];
 
         foreach Complaint c in allComplaints {
-            // Determine priority based on keywords in description (case-insensitive)
-            string priority = "low"; // default
-            string descLower = c.description.toLowerAscii();
-            foreach string kw in highPriorityKeywords {
-                if descLower.includes(kw) {
-                    priority = "high";
-                    break;
-                }
-            }
-            if priority != "high" {
-                foreach string kw in mediumPriorityKeywords {
-                    if descLower.includes(kw) {
-                        priority = "medium";
-                        break;
-                    }
-                }
-            }
-
             // Determine status using verified, pending, resolved fields
             string status = "pending"; // default
             if c.verified {
@@ -419,7 +416,11 @@ service /complaints on complaintListen {
                 description: c.description,
                 location: c.location,
                 date: c.date,
-                priority: priority,
+                priority: c.priority,
+                verified: c.verified,
+                pending: c.pending,
+                resolved: c.resolved,
+                isRegisteredUser: c.isRegisteredUser,
                 status: status
             };
 
@@ -480,7 +481,9 @@ service /complaints on complaintListen {
                 location: c.location,
                 verified: c.verified,
                 pending: c.pending,
-                resolved: c.resolved
+                resolved: c.resolved,
+                isRegisteredUser: c.isRegisteredUser,
+                priority: c.priority
             };
             if c.mediaPath is string {
                 // complaintJson["mediaPath"] = c.mediaPath;
@@ -569,7 +572,9 @@ service /complaints on complaintListen {
                 location: c.location,
                 verified: c.verified,
                 pending: c.pending,
-                resolved: c.resolved
+                resolved: c.resolved,
+                isRegisteredUser: c.isRegisteredUser,
+                priority: c.priority
             };
             if c.mediaPath is string {
                 map<json> withMedia = <map<json>> complaintJson;
@@ -605,6 +610,8 @@ public type Complaint record {
     boolean verified;
     boolean pending;
     boolean resolved;
+    boolean isRegisteredUser;
+    string priority;
 };
 
 
