@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import NewsTicker from '../components/NewsTicker';
 import HeatMap from '../components/HeatMap';
 import crimeBackground from '../assets/crime-background.jpg';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/accordion';
 
 const Home = () => {
   return (
@@ -146,6 +147,50 @@ const Home = () => {
       <br/>
       {/* News Ticker */}
       <NewsTicker />
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold mb-2">Frequently Asked Questions</h2>
+                      </div>
+
+          <div className="card-crime p-6">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>Is my report anonymous?</AccordionTrigger>
+                <AccordionContent>
+                  Yes. You can submit reports anonymously. We do not reveal your identity without your explicit consent.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-2">
+                <AccordionTrigger>How do I track my complaint status?</AccordionTrigger>
+                <AccordionContent>
+                  After submitting a report, you will receive a reference ID. Use it to check live status updates on your profile.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-3">
+                <AccordionTrigger>What evidence can I upload?</AccordionTrigger>
+                <AccordionContent>
+                  You can upload images, documents, and videos that support your case. Please ensure files are clear and relevant.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-4">
+                <AccordionTrigger>When should I use the Emergency Report?</AccordionTrigger>
+                <AccordionContent>
+                  Use the Emergency Report for situations that require immediate attention, such as ongoing crimes or life-threatening events.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+      </section>
+     
+
+
 
     </div>
   );
