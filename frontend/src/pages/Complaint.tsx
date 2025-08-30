@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useToast } from '../hooks/use-toast';
 import LocationPicker from '../components/LocationPicker';
 import SimpleLocationPicker from '../components/SimpleLocationPicker';
+import ReCAPTCHA from 'react-google-recaptcha';
 import crimeBackground from '../assets/crime-background.jpg';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -39,6 +40,7 @@ const Complaint = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [useSimpleLocation, setUseSimpleLocation] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -127,6 +129,10 @@ const Complaint = () => {
       hasError: !complaintData.location.trim() || (!useSimpleLocation && (complaintData.latitude === null || complaintData.longitude === null))
     });
 
+    if (!recaptchaToken) {
+      newErrors.recaptcha = 'Please complete the reCAPTCHA verification';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -170,6 +176,10 @@ const Complaint = () => {
           formData.append('media', file);
         });
       }
+      // Include reCAPTCHA token for server-side verification
+      if (recaptchaToken) {
+        formData.append('recaptchaToken', recaptchaToken);
+      }
       console.log('FormData entries:');
       for (let [key, value] of formData.entries()) {
         console.log(key, value);
@@ -204,6 +214,8 @@ const Complaint = () => {
         longitude: null,
         media: []
       });
+      // Reset reCAPTCHA
+      setRecaptchaToken(null);
     } catch (error:any) {
       toast({
         title: 'Submission Error',
@@ -444,15 +456,40 @@ const Complaint = () => {
             </div>
 
 
-            {/* reCAPTCHA Placeholder */}
-            <div className="border border-border rounded-lg p-4 bg-secondary/20">
-              <div className="flex items-center space-x-3">
-                <input type="checkbox" id="recaptcha" className="w-5 h-5" />
-                <label htmlFor="recaptcha" className="text-sm">
-                  I'm not a robot
-                </label>
-                <div className="ml-auto text-xs text-muted-foreground">reCAPTCHA</div>
+            {/* reCAPTCHA */}
+            <div className="space-y-2">
+              <Label>Security Verification *</Label>
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                  onChange={(token) => {
+                    setRecaptchaToken(token);
+                    // Clear any existing reCAPTCHA error
+                    if (errors.recaptcha) {
+                      setErrors(prev => {
+                        const newErrors = {...prev};
+                        delete newErrors.recaptcha;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  onExpired={() => {
+                    setRecaptchaToken(null);
+                    setErrors(prev => ({
+                      ...prev,
+                      recaptcha: 'reCAPTCHA has expired. Please verify again.'
+                    }));
+                  }}
+                  onError={() => {
+                    setRecaptchaToken(null);
+                    setErrors(prev => ({
+                      ...prev,
+                      recaptcha: 'reCAPTCHA failed to load. Please refresh the page.'
+                    }));
+                  }}
+                />
               </div>
+              {errors.recaptcha && <p className="text-sm text-destructive text-center">{errors.recaptcha}</p>}
             </div>
 
             {/* Submit Button */}
