@@ -32,7 +32,7 @@ mongodb:Client mongoClient = check new ({
 
 http:CorsConfig corsConfig = {
     allowCredentials: true,
-    allowHeaders: ["Content-Type", "Authorization" , "CORELATION-ID", "Access-Control-Allow-Origin"],
+    allowHeaders: ["Content-Type", "Authorization", "CORELATION-ID", "Access-Control-Allow-Origin", "Cookie"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowOrigins: [FRONTEND_COMPLAINT_URL],
     exposeHeaders: ["Content-Length", "ETag"]
@@ -105,6 +105,42 @@ service /complaints on complaintListen {
 
         string id = uuid:createType4AsString();
         string mediaPath = "";// Initialize mediaPath to an empty string.
+
+        // Check if user is registered through cookies
+        http:Cookie[]|error cookies = req.getCookies();
+        boolean isRegisteredUser = false;
+        boolean hasRegCookie = false;
+        boolean hasUnregCookie = false;
+
+        if cookies is http:Cookie[] {
+            foreach http:Cookie cookie in cookies {
+                string cookieName = cookie.name;
+                // Check for authorization cookies
+                if cookieName == "reg_user_id" {
+                    hasRegCookie = true;
+                } else if cookieName == "unreg_user_id" {
+                    hasUnregCookie = true;
+                }
+            }
+
+            // Determine registration status based on cookies found
+            if hasRegCookie {
+                // reg_user_id cookie found - registered user (takes priority)
+                isRegisteredUser = true;
+                if hasUnregCookie {
+                    io:println("Warning: Both reg_user_id and unreg_user_id cookies found - prioritizing reg_user_id");
+                }
+            } else if hasUnregCookie {
+                // Only unreg_user_id cookie found - unregistered user
+                isRegisteredUser = false;
+            } else {
+                // No authorization cookies found - use fallback
+                isRegisteredUser = creator.trim() != "";
+            }
+        } else {
+            // No cookies available - use fallback
+            isRegisteredUser = creator.trim() != "";
+        }
 
 
         mime:Entity[]|mime:ParserError bodyPartsResult = check req.getBodyParts();
@@ -303,8 +339,6 @@ service /complaints on complaintListen {
             }
         }
 
-        // Determine if user is registered (creator is not empty)
-        boolean isRegisteredUser = creator.trim() != "";
 
         Complaint complaint = {
             id: id,
@@ -590,7 +624,7 @@ function complaintToJson(Complaint c) returns json {
 
 function addCorsHeaders(http:Response resp) {
     resp.setHeader("Access-Control-Allow-Origin", FRONTEND_COMPLAINT_URL);
-    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, CORELATION-ID, Access-Control-Allow-Origin");
+    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, CORELATION-ID, Access-Control-Allow-Origin, Cookie");
     resp.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     resp.setHeader("Access-Control-Allow-Credentials", "true");
 };
