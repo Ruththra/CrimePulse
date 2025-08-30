@@ -254,9 +254,9 @@ const AdminHome = () => {
                 </div>
               </CardContent>
             </Card> */}
-            <div className="heatmap-container">
+            {/* <div className="heatmap-container"> */}
               <HeatMap />
-            </div>
+            {/* </div> */}
 
             {/* ApexChart Section */}
             <Card className="bg-card/95 backdrop-blur-sm border-destructive/20 p-4">
