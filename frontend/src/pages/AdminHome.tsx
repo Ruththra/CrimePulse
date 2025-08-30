@@ -313,7 +313,7 @@ const AdminHome = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="hidden md:table-cell">ID</TableHead>
+                        <TableHead className="hidden md:table-cell">S.No</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="hidden md:table-cell">Description</TableHead>
                         <TableHead>Location</TableHead>
@@ -328,9 +328,9 @@ const AdminHome = () => {
                     </TableHeader>
 
                     <TableBody>
-                      {complaints.map((complaint) => (
+                      {complaints.map((complaint, index) => (
                         <TableRow key={complaint.id}>
-                          <TableCell className="hidden md:table-cell">{complaint.id}</TableCell>
+                          <TableCell className="hidden md:table-cell">{index + 1}</TableCell>
                           <TableCell>{complaint.category}</TableCell>
                           <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
                           <TableCell>{complaint.location}</TableCell>
