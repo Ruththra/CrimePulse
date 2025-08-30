@@ -47,7 +47,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
-    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: '', agreePolicy: true
+    fullName: '', telephone: '', nic: '', email: '', password: '', confirmPassword: '', agreePolicy: false
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
@@ -251,36 +251,6 @@ const Auth = () => {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <div className="flex items-start gap-2">
-                  <input
-                    id="agreePolicy"
-                    type="checkbox"
-                    className="mt-1 h-4 w-4"
-                    checked={registerData.agreePolicy}
-                    onChange={(e) => setRegisterData({ ...registerData, agreePolicy: e.target.checked })}
-                  />
-                  <Label htmlFor="agreePolicy" className="text-sm text-muted-foreground">
-                    I agree to the{' '}
-                    <a
-                      href="/privacy-policy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      Privacy Policy
-                    </a>{' '}and{' '}
-                    <a
-                      href="/terms-and-conditions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      Terms and Conditions
-                    </a>
-                    .
-                  </Label>
-                </div>
-                {errors.agreePolicy && <p className="text-sm text-destructive">{errors.agreePolicy}</p>}
 
                 <Button type="submit" className="btn-crime w-full" disabled={isLoggingIn}>
                   {isLoggingIn ? (
@@ -411,6 +381,38 @@ const Auth = () => {
                   </div>
                   {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                 </div>
+
+                <div className="flex items-start gap-2">
+                  <input
+                    id="agreePolicy"
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={registerData.agreePolicy}
+                    onChange={(e) => setRegisterData({ ...registerData, agreePolicy: e.target.checked })}
+                  />
+                  <Label htmlFor="agreePolicy" className="text-sm text-muted-foreground">
+                    I agree to the{' '}
+                    <a
+                      href="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Privacy Policy
+                    </a>{' '}and{' '}
+                    <a
+                      href="/terms-and-conditions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Terms and Conditions
+                    </a>
+                    .
+                  </Label>
+                </div>
+                {errors.agreePolicy && <p className="text-sm text-destructive">{errors.agreePolicy}</p>}
+
 
                 <Button type="submit" className="btn-crime w-full">
                   Create Account
