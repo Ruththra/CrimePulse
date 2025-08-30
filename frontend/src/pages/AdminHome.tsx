@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../components/ui/pagination';
 import { Shield, Eye, LogOut, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import HeatMap from '../components/HeatMap';
 import ReactApexChart from 'react-apexcharts';
@@ -31,7 +32,12 @@ const AdminHome = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const navigate = useNavigate();
+
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(complaints.length / itemsPerPage);
+  const paginatedComplaints = complaints.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const API_URL = 'http://localhost:8081/complaints/getAllComplaints'; // <--- Corrected backend URL
 
@@ -106,6 +112,7 @@ const AdminHome = () => {
       });
 
       setComplaints(sortedComplaints);
+      setCurrentPage(1); // Reset to first page when complaints are loaded
     } catch (error) {
       console.error('Failed to fetch complaints:', error);
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -328,9 +335,9 @@ const AdminHome = () => {
                     </TableHeader>
 
                     <TableBody>
-                      {complaints.map((complaint, index) => (
+                      {paginatedComplaints.map((complaint, index) => (
                         <TableRow key={complaint.id}>
-                          <TableCell className="hidden md:table-cell">{index + 1}</TableCell>
+                          <TableCell className="hidden md:table-cell">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                           <TableCell>{complaint.category}</TableCell>
                           <TableCell className="hidden md:table-cell">{complaint.description}</TableCell>
                           <TableCell>{complaint.location}</TableCell>
@@ -375,6 +382,41 @@ const AdminHome = () => {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+
+                {/* Pagination */}
+                {complaints.length > 0 && totalPages > 1 && (
+                  <div className="mt-4 flex justify-center">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            size="default"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              size="default"
+                              isActive={currentPage === page}
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            size="default"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
                 )}
 
               </div>
