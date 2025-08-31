@@ -242,8 +242,8 @@ const Profiles = () => {
               <div className="mt-4 pt-4 border-t border-border">
                 <div className="text-sm text-muted-foreground mb-2">Resolution Rate</div>
                 <div className="w-full bg-secondary rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full" 
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
                     style={{ width: `${(userStats.resolvedCases / userStats.totalReports) * 100}%` }}
                   ></div>
                 </div>
@@ -252,7 +252,14 @@ const Profiles = () => {
                 </div>
               </div>
             </div>
+
+            {/* New Complaint Button */}
+            <Button className="btn-crime w-full mt-4" onClick={() => navigate('/complaint')}>
+              <FileText className="h-5 w-5 mr-2" />
+              New Complaint
+            </Button>
           </div>
+          
 
           {/* Recent Reports - Only show for non-admin users */}
           {userProfile?.userType !== 'admin' && (
@@ -343,17 +350,6 @@ const Profiles = () => {
                 )}
               </div>
 
-              {/* Quick Actions */}
-              <div className="mt-8 grid md:grid-cols-2 gap-4">
-                <Button className="btn-crime h-16 text-lg" onClick={() => navigate('/complaint')}>
-                  <FileText className="h-6 w-6 mr-3" />
-                  New Complaint
-                </Button>
-                <Button className="btn-outline-crime h-16 text-lg">
-                  <Shield className="h-6 w-6 mr-3" />
-                  Safety Tips
-                </Button>
-              </div>
             </div>
           )}
 
