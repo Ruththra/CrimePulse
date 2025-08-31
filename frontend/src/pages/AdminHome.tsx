@@ -48,6 +48,12 @@ const AdminHome = () => {
     return categoryMatch && priorityMatch;
   });
 
+  // Calculate category counts for the chart
+  const categoryLabels = ['Theft', 'Assault', 'Cybercrime', 'Missing Person', 'Other'];
+  const categoryCounts = categoryLabels.map(label => {
+    return filteredComplaints.filter(complaint => complaint.category === label).length;
+  });
+
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
   const paginatedComplaints = filteredComplaints.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -315,7 +321,7 @@ const AdminHome = () => {
               </CardHeader>
               <CardContent>
                 <div className="apexchart-container">
-                  <ApexChart />
+                  <ApexChart series={categoryCounts} labels={categoryLabels} />
                 </div>
               </CardContent>
             </Card>
