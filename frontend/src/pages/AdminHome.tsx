@@ -48,10 +48,10 @@ const AdminHome = () => {
     return categoryMatch && priorityMatch;
   });
 
-  // Calculate category counts for the chart
+  // Calculate category counts for the chart (using all complaints, not filtered)
   const categoryLabels = ['Theft', 'Assault', 'Cybercrime', 'Missing Person', 'Other'];
   const categoryCounts = categoryLabels.map(label => {
-    return filteredComplaints.filter(complaint => complaint.category === label).length;
+    return complaints.filter(complaint => complaint.category === label).length;
   });
 
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
@@ -231,14 +231,10 @@ const AdminHome = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {categoryFilter !== 'all' || priorityFilter !== 'all' ? 'Filtered Complaints' : 'Total Complaints'}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Complaints</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {categoryFilter !== 'all' || priorityFilter !== 'all' ? filteredComplaints.length : complaints.length || 0}
-              </div>
+              <div className="text-2xl font-bold text-foreground">{complaints.length || 0}</div>
             </CardContent>
           </Card>
           <Card className="bg-card/95 backdrop-blur-sm border-yellow-500/20">
@@ -247,10 +243,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {(categoryFilter !== 'all' || priorityFilter !== 'all'
-                  ? filteredComplaints.filter(c => c.pending === true)
-                  : complaints.filter(c => c.pending === true)
-                ).length || 0}
+                {complaints.filter(c => c.pending === true).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -260,10 +253,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {(categoryFilter !== 'all' || priorityFilter !== 'all'
-                  ? filteredComplaints.filter(c => c.verified === true)
-                  : complaints.filter(c => c.verified === true)
-                ).length || 0}
+                {complaints.filter(c => c.verified === true).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -273,10 +263,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                {(categoryFilter !== 'all' || priorityFilter !== 'all'
-                  ? filteredComplaints.filter(c => c.priority === 'high')
-                  : complaints.filter(c => c.priority === 'high')
-                ).length || 0}
+                {complaints.filter(c => c.priority === 'high').length || 0}
               </div>
             </CardContent>
           </Card>
@@ -286,10 +273,7 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {(categoryFilter !== 'all' || priorityFilter !== 'all'
-                  ? filteredComplaints.filter(c => c.isRegisteredUser === true)
-                  : complaints.filter(c => c.isRegisteredUser === true)
-                ).length || 0}
+                {complaints.filter(c => c.isRegisteredUser === true).length || 0}
               </div>
             </CardContent>
           </Card>
