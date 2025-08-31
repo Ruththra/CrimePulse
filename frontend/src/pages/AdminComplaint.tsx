@@ -124,8 +124,8 @@ const AdminComplaint = () => {
 
   const handleVerify = () => {
     if (!complaint) return;
-    
-    setComplaint(prev => prev ? { ...prev, status: 'verified' } : null);
+
+    setComplaint(prev => prev ? { ...prev, verified: true, pending: false } : null);
     toast({
       title: "Complaint Verified",
       description: "The complaint has been marked as verified and will be forwarded to relevant authorities.",
@@ -135,12 +135,23 @@ const AdminComplaint = () => {
 
   const handleReject = () => {
     if (!complaint) return;
-    
-    setComplaint(prev => prev ? { ...prev, status: 'rejected' } : null);
+
+    setComplaint(prev => prev ? { ...prev, verified: false, pending: false } : null);
     toast({
-      title: "Complaint Rejected", 
+      title: "Complaint Rejected",
       description: "The complaint has been marked as rejected.",
       variant: "destructive",
+    });
+  };
+
+  const handleResolve = () => {
+    if (!complaint) return;
+
+    setComplaint(prev => prev ? { ...prev, verified: true, pending: false, resolved: true } : null);
+    toast({
+      title: "Complaint Resolved",
+      description: "The complaint has been marked as resolved.",
+      variant: "default",
     });
   };
 
@@ -155,7 +166,7 @@ const AdminComplaint = () => {
 
   const getComplaintStatus = (complaint: Complaint): string => {
     if (complaint.pending) return 'pending';
-    if (complaint.resolved) return 'verified';
+    if (complaint.resolved) return 'resolved';
     if (complaint.verified) return 'verified';
     return 'rejected';
   };
@@ -165,6 +176,7 @@ const AdminComplaint = () => {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'verified': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
+      case 'resolved': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -363,6 +375,13 @@ const AdminComplaint = () => {
                       <XCircle className="h-4 w-4 mr-2" />
                       Reject Complaint
                     </Button>
+                    <Button
+                      onClick={handleResolve}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Complaint Resolved
+                    </Button>
                   </>
                 )}
                 {getComplaintStatus(complaint) === 'verified' && (
@@ -375,6 +394,12 @@ const AdminComplaint = () => {
                   <div className="flex items-center justify-center p-4 bg-red-50 border border-red-200 rounded-lg">
                     <XCircle className="h-5 w-5 text-red-600 mr-2" />
                     <span className="text-red-800 font-medium">Complaint Rejected</span>
+                  </div>
+                )}
+                {getComplaintStatus(complaint) === 'resolved' && (
+                  <div className="flex items-center justify-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600 mr-2" />
+                    <span className="text-blue-800 font-medium">Complaint Resolved</span>
                   </div>
                 )}
               </CardContent>

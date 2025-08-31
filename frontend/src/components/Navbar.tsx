@@ -50,7 +50,7 @@ const Navbar = () => {
     // ...(isRegisteredUser ? [{ name: 'Complaint', href: '/complaint' }] : []),
     ...(isAdmin ? [
       { name: 'Dashboard', href: '/admin/home' },
-      { name: 'Admin Complaints', href: '/admin/complaints' }
+      // { name: 'Admin Complaints', href: '/admin/complaints' }
     ] : []),
       { name: 'Contacts', href: '/contacts' },
      ...(true ? [{ name: 'Profiles', href: '/profiles' }] : []),
