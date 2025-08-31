@@ -21,7 +21,7 @@ import AdminHome from "./pages/AdminHome";
 import AdminComplaint from "./pages/AdminComplaint";
 import Logout from "./pages/Logout";
 import NotFound from "./pages/NotFound";
-import { RingLoader } from "react-spinners";
+import { CircleLoader } from "react-spinners";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -63,8 +63,8 @@ function App() {
   if (isCheckingAuth && !authCheckTimeout) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <RingLoader
-          color="#0de5be"
+        <CircleLoader
+          color="red"
           loading={true}
           size={80}
           speedMultiplier={1}
@@ -80,7 +80,7 @@ function App() {
     // Return loading state one more time to allow state to update
     return (
       <div className="flex items-center justify-center h-screen">
-        <RingLoader
+        <CircleLoader
           color="#0de5be"
           loading={true}
           size={80}
@@ -108,7 +108,7 @@ function App() {
                   element={
                     isCheckingAuth ?
                       <div className="flex items-center justify-center h-screen">
-                        <RingLoader color="#0de5be" loading={true} size={60} />
+                        <CircleLoader color="#0de5be" loading={true} size={60} />
                       </div> :
                     // isRegisteredUser ?
                         true ?
@@ -123,7 +123,7 @@ function App() {
                   element={
                     isCheckingAuth ?
                       <div className="flex items-center justify-center h-screen">
-                        <RingLoader color="#0de5be" loading={true} size={60} />
+                        <CircleLoader color="#0de5be" loading={true} size={60} />
                       </div> :
                     true ?
                       <Profiles /> :
