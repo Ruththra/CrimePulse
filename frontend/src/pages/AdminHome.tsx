@@ -49,7 +49,7 @@ const AdminHome = () => {
   });
 
   // Calculate category counts for the chart (using all complaints, not filtered)
-  const categoryLabels = ['Theft', 'Assault', 'Cybercrime', 'Missing Person', 'Other'];
+  const categoryLabels = ['Theft', 'Assault', 'CyberCrime', 'MissingPerson', 'Other'];
   const categoryCounts = categoryLabels.map(label => {
     return complaints.filter(complaint => complaint.category === label).length;
   });
@@ -329,8 +329,8 @@ const AdminHome = () => {
                         <SelectItem value="all">All Categories</SelectItem>
                         <SelectItem value="Theft">Theft</SelectItem>
                         <SelectItem value="Assault">Assault</SelectItem>
-                        <SelectItem value="CyberCrime">Cybercrime</SelectItem>
-                        <SelectItem value="MissingPerson">Missing Person</SelectItem>
+                        <SelectItem value="CyberCrime">CyberCrime</SelectItem>
+                        <SelectItem value="MissingPerson">MissingPerson</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>

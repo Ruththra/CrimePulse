@@ -10,7 +10,7 @@ interface ApexChart3DProps {
 
 const ApexChart3D: React.FC<ApexChart3DProps> = ({
   series = [14, 23, 21, 17, 15],
-  labels = ['Theft', 'Assault', 'Cybercrime', 'Missing Person', 'Other']
+  labels = ['Theft', 'Assault', 'CyberCrime', 'MissingPerson', 'Other']
 }) => {
   const options: ApexOptions = {
     chart: { type: 'polarArea', width: '100%', height: 400 },
