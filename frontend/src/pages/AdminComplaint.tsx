@@ -1,49 +1,107 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, MapPin, Calendar, User, FileText } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, MapPin, Calendar, User, FileText, UserCheck, Shield } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
 
 interface Complaint {
   id: string;
   category: string;
+  creator: string;
   description: string;
   location: string;
   date: string;
   time: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'verified' | 'rejected';
-  reporterName: string;
-  reporterPhone: string;
-  reporterNIC: string;
-  mediaFiles?: string[];
+  verified: boolean;
+  pending: boolean;
+  resolved: boolean;
+  isRegisteredUser: boolean;
+  mediaPath?: string;
 }
 
-const mockComplaint: Complaint = {
-  id: '1',
-  category: 'Assault',
-  description: 'There was a physical altercation near the Central Market around 3 PM. Two individuals were involved in a heated argument that escalated to physical violence. Several witnesses were present. The incident occurred near the main entrance of the market.',
-  location: 'Colombo Central Market, Main Entrance',
-  date: '2024-01-15',
-  time: '15:00',
-  priority: 'high',
-  status: 'pending',
-  reporterName: 'John Doe',
-  reporterPhone: '+94771234567',
-  reporterNIC: '123456789V',
-  mediaFiles: ['incident_photo_1.jpg', 'witness_video.mp4']
-};
+// User profile interface for reporter information
+interface UserProfile {
+  userType: 'unregistered' | 'registered' | 'admin';
+  username?: string;
+  email?: string;
+  phone?: string;
+  icNumber?: string;
+  memberSince: string;
+  id: string;
+}
 
 const AdminComplaint = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [adminNotes, setAdminNotes] = useState('');
+
+  // Fetch complaint by ID
+  const fetchComplaint = async () => {
+    try {
+      setLoading(true);
+      // Fetch all complaints since we don't have a single complaint endpoint
+      const response = await fetch(`http://localhost:8081/complaints/getAllComplaints`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch complaints');
+      }
+      const data = await response.json();
+
+      // Find the specific complaint by ID
+      const foundComplaint = data.find((c: Complaint) => c.id === id);
+      if (!foundComplaint) {
+        throw new Error('Complaint not found');
+      }
+
+      setComplaint(foundComplaint);
+    } catch (err) {
+      console.error('Error fetching complaint:', err);
+      toast({
+        title: "Error",
+        description: "Failed to load complaint details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch user profile for the complaint creator
+  const fetchUserProfile = async (creatorId: string) => {
+    try {
+      setProfileLoading(true);
+      const response = await fetch('http://localhost:8082/auth/identifyProfile', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const profileData = await response.json();
+      setUserProfile(profileData);
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      // Set default profile if API fails
+      setUserProfile({
+        userType: 'unregistered',
+        memberSince: 'Unknown',
+        id: creatorId
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check admin authentication
@@ -53,9 +111,17 @@ const AdminComplaint = () => {
       return;
     }
 
-    // In a real app, fetch complaint by ID
-    setComplaint(mockComplaint);
+    if (id) {
+      fetchComplaint();
+    }
   }, [id, navigate]);
+
+  // Fetch user profile when complaint is loaded
+  useEffect(() => {
+    if (complaint?.creator) {
+      fetchUserProfile(complaint.creator);
+    }
+  }, [complaint]);
 
   const handleVerify = () => {
     if (!complaint) return;
@@ -88,6 +154,13 @@ const AdminComplaint = () => {
     }
   };
 
+  const getComplaintStatus = (complaint: Complaint): string => {
+    if (complaint.pending) return 'pending';
+    if (complaint.resolved) return 'verified';
+    if (complaint.verified) return 'verified';
+    return 'rejected';
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -97,8 +170,16 @@ const AdminComplaint = () => {
     }
   };
 
-  if (!complaint) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (loading || !complaint) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-destructive mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold mb-2">Loading Complaint Details...</h3>
+          <p className="text-muted-foreground">Please wait while we fetch the complaint information.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -121,8 +202,8 @@ const AdminComplaint = () => {
             <Badge className={getPriorityColor(complaint.priority)}>
               {complaint.priority} Priority
             </Badge>
-            <Badge variant="outline" className={getStatusColor(complaint.status)}>
-              {complaint.status}
+            <Badge variant="outline" className={getStatusColor(getComplaintStatus(complaint))}>
+              {getComplaintStatus(complaint)}
             </Badge>
           </div>
         </div>
@@ -163,15 +244,13 @@ const AdminComplaint = () => {
                     </div>
                   </div>
                 </div>
-                {complaint.mediaFiles && complaint.mediaFiles.length > 0 && (
+                {complaint.mediaPath && (
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Media Evidence</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {complaint.mediaFiles.map((file, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {file}
-                        </Badge>
-                      ))}
+                      <Badge variant="outline" className="text-xs">
+                        {complaint.mediaPath.split('/').pop() || 'Media file'}
+                      </Badge>
                     </div>
                   </div>
                 )}
@@ -212,18 +291,73 @@ const AdminComplaint = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Name</Label>
-                  <p className="text-foreground">{complaint.reporterName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                  <p className="text-foreground">{complaint.reporterPhone}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">NIC</Label>
-                  <p className="text-foreground">{complaint.reporterNIC}</p>
-                </div>
+                {profileLoading ? (
+                  <div className="flex justify-center items-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-sm">Loading profile...</span>
+                  </div>
+                ) : userProfile ? (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Name</Label>
+                      <p className="text-foreground">
+                        {userProfile.userType === 'unregistered' ? 'Anonymous' :
+                         userProfile.username || 'User'}
+                      </p>
+                    </div>
+                    {userProfile.userType === 'registered' && userProfile.email && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                        <p className="text-foreground">{userProfile.email}</p>
+                      </div>
+                    )}
+                    {userProfile.userType === 'registered' && userProfile.phone && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                        <p className="text-foreground">{userProfile.phone}</p>
+                      </div>
+                    )}
+                    {userProfile.userType === 'registered' && userProfile.icNumber && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">NIC</Label>
+                        <p className="text-foreground">{userProfile.icNumber}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Member Since</Label>
+                      <p className="text-foreground">{userProfile.memberSince}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium capitalize">{userProfile.userType}</span>
+                        {userProfile.userType === 'admin' && (
+                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Administrator
+                          </Badge>
+                        )}
+                        {userProfile.userType === 'registered' && (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/20">
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Verified
+                          </Badge>
+                        )}
+                        {userProfile.userType === 'unregistered' && (
+                          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/20">
+                            <User className="h-3 w-3 mr-1" />
+                            Anonymous
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">Unable to load reporter information</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -233,16 +367,16 @@ const AdminComplaint = () => {
                 <CardTitle>Verification Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {complaint.status === 'pending' && (
+                {getComplaintStatus(complaint) === 'pending' && (
                   <>
-                    <Button 
+                    <Button
                       onClick={handleVerify}
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Verify Complaint
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleReject}
                       variant="destructive"
                       className="w-full"
@@ -252,13 +386,13 @@ const AdminComplaint = () => {
                     </Button>
                   </>
                 )}
-                {complaint.status === 'verified' && (
+                {getComplaintStatus(complaint) === 'verified' && (
                   <div className="flex items-center justify-center p-4 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                     <span className="text-green-800 font-medium">Complaint Verified</span>
                   </div>
                 )}
-                {complaint.status === 'rejected' && (
+                {getComplaintStatus(complaint) === 'rejected' && (
                   <div className="flex items-center justify-center p-4 bg-red-50 border border-red-200 rounded-lg">
                     <XCircle className="h-5 w-5 text-red-600 mr-2" />
                     <span className="text-red-800 font-medium">Complaint Rejected</span>
