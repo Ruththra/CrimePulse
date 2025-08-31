@@ -28,17 +28,50 @@
 ---
 
 ## Overview
-[Write a short description of the project here.]
+Crime Pulse is a web platform to submit crime complaints anonymously (or as a registered user). Complaints can include photos/videos and are routed to the local police station after admin verification. A public HeatMap shows approximate incident locations. A Newsfeed surfaces relevant crime-related news. An Admin interface reviews complaints and updates statuses.
 
 ---
 
 ## Key Features
-[Bullet points of the main features go here.]
+>Anonymous & Registered reporting (auto-generated anonymous IDs)
+
+>Complaint submission with media attachments (photo/video) and geotag
+
+>HeatMap of approximate crime locations (privacy-preserving jitter)
+
+>Newsfeed filtered via News API
+
+>FAQ & Emergency contacts
+
+>Admin dashboard: heatmap, category pie chart, complaint review & status changes
+
+>Anti-spam via Google reCAPTCHA
 
 ---
 
 ## System Architecture
-[Add a diagram or description of your architecture.]
+[Web Client (React/TS)]
+  ├─ Map (Google Maps JS API)
+  ├─ Newsfeed (News API)
+  └─ reCAPTCHA
+
+      ⇅ HTTPS (JWT/Session)
+
+[Backend (Ballerina Microservices)]
+   ├─ auth-service          (login/register, JWT)
+   ├─ complaint-service     (CRUD, media, status)
+   ├─ heatmap-service       (aggregations, jitter)
+   ├─ news-service          (curation proxy to News API)
+   └─ admin-service         (moderation, metrics)
+
+[MongoDB Atlas/Server]
+   ├─ users
+   ├─ complaints
+   └─ audit_logs
+
+[Object Storage (optional: S3/GCS/MinIO)]
+   └─ media uploads
+
 
 ---
 
