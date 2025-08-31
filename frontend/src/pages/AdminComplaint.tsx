@@ -79,9 +79,8 @@ const AdminComplaint = () => {
   const fetchUserProfile = async (creatorId: string) => {
     try {
       setProfileLoading(true);
-      const response = await fetch('http://localhost:8082/auth/identifyProfile', {
+      const response = await fetch(`http://localhost:8082/auth/getUserProfile/${creatorId}`, {
         method: 'GET',
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -327,29 +326,9 @@ const AdminComplaint = () => {
                       <Label className="text-sm font-medium text-muted-foreground">Member Since</Label>
                       <p className="text-foreground">{userProfile.memberSince}</p>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div>
                       <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium capitalize">{userProfile.userType}</span>
-                        {userProfile.userType === 'admin' && (
-                          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Administrator
-                          </Badge>
-                        )}
-                        {userProfile.userType === 'registered' && (
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/20">
-                            <UserCheck className="h-3 w-3 mr-1" />
-                            Verified
-                          </Badge>
-                        )}
-                        {userProfile.userType === 'unregistered' && (
-                          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/20">
-                            <User className="h-3 w-3 mr-1" />
-                            Anonymous
-                          </Badge>
-                        )}
-                      </div>
+                      <p className="text-foreground">{userProfile.userType}</p>
                     </div>
                   </>
                 ) : (

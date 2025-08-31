@@ -155,6 +155,65 @@ service /auth on authListener {
         check caller->respond(resp);
     }
 
+    resource function get getUserProfile/[string userId](http:Caller caller, http:Request req) returns error? {
+        http:Response resp = new;
+
+        // First, try registered users
+        mongodb:Collection regUsersCol = check self.accountsDb->getCollection(COLLECTION_REGISTEREDUSERS);
+        stream<RegisteredUser, error?> foundUsers = check regUsersCol->find({ id: userId });
+        RegisteredUser[] usersList = check from RegisteredUser u in foundUsers select u;
+
+        if usersList.length() > 0 {
+            RegisteredUser user = usersList[0];
+            resp.setJsonPayload({
+                "userType": "registered",
+                "username": user.username,
+                "email": user.email,
+                "phone": user.phone,
+                "icNumber": user.icNumber,
+                "memberSince": user.memberSince,
+                "id": user.id
+            });
+        } else {
+            // Try unregistered
+            mongodb:Collection unregUsersCol = check self.accountsDb->getCollection(COLLECTION_UNREGISTEREDUSERS);
+            stream<map<json>, error?> foundUnreg = check unregUsersCol->find({ id: userId });
+            map<json>[] unregList = check from map<json> u in foundUnreg select u;
+
+            if unregList.length() > 0 {
+                map<json> user = unregList[0];
+                resp.setJsonPayload({
+                    "userType": "unregistered",
+                    "memberSince": user["memberSince"],
+                    "id": user["id"]
+                });
+            } else {
+                // Try admins
+                mongodb:Collection adminUsersCol = check self.accountsDb->getCollection(COLLECTION_ADMINS);
+                stream<RegisteredUser, error?> foundAdmins = check adminUsersCol->find({ id: userId });
+                RegisteredUser[] adminList = check from RegisteredUser u in foundAdmins select u;
+
+                if adminList.length() > 0 {
+                    RegisteredUser user = adminList[0];
+                    resp.setJsonPayload({
+                        "userType": "admin",
+                        "username": user.username,
+                        "memberSince": user.memberSince,
+                        "id": user.id
+                    });
+                } else {
+                    resp.setJsonPayload({
+                        "error": "User not found"
+                    });
+                    resp.statusCode = 404;
+                }
+            }
+        }
+
+        addCorsHeaders(resp);
+        check caller->respond(resp);
+    }
+
     resource function get identify(http:Caller caller, http:Request req) returns error? {
         http:Cookie[] cookies = req.getCookies();
         http:Cookie? cookie = ();
