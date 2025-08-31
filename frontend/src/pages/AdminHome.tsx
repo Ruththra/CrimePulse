@@ -5,6 +5,8 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Label } from '../components/ui/label';
 import { Shield, Eye, LogOut, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import HeatMap from '../components/HeatMap';
 import ReactApexChart from 'react-apexcharts';
@@ -33,11 +35,21 @@ const AdminHome = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const navigate = useNavigate();
 
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(complaints.length / itemsPerPage);
-  const paginatedComplaints = complaints.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Filter complaints based on selected filters
+  const filteredComplaints = complaints.filter(complaint => {
+    const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
+    const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
+    return categoryMatch && priorityMatch;
+  });
+
+  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+  const paginatedComplaints = filteredComplaints.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const API_URL = 'http://localhost:8081/complaints/getAllComplaints'; // <--- Corrected backend URL
 
@@ -137,6 +149,21 @@ const AdminHome = () => {
     navigate('/admin/auth');
   };
 
+  const handleFilterChange = (type: 'category' | 'priority', value: string) => {
+    if (type === 'category') {
+      setCategoryFilter(value);
+    } else {
+      setPriorityFilter(value);
+    }
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  const clearFilters = () => {
+    setCategoryFilter('all');
+    setPriorityFilter('all');
+    setCurrentPage(1);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-destructive text-destructive-foreground';
@@ -198,10 +225,14 @@ const AdminHome = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Complaints</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {categoryFilter !== 'all' || priorityFilter !== 'all' ? 'Filtered Complaints' : 'Total Complaints'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{complaints.length || 0}</div>
+              <div className="text-2xl font-bold text-foreground">
+                {categoryFilter !== 'all' || priorityFilter !== 'all' ? filteredComplaints.length : complaints.length || 0}
+              </div>
             </CardContent>
           </Card>
           <Card className="bg-card/95 backdrop-blur-sm border-yellow-500/20">
@@ -210,7 +241,10 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {complaints.filter(c => c.pending === true).length || 0}
+                {(categoryFilter !== 'all' || priorityFilter !== 'all'
+                  ? filteredComplaints.filter(c => c.pending === true)
+                  : complaints.filter(c => c.pending === true)
+                ).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -220,7 +254,10 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {complaints.filter(c => c.verified === true).length || 0}
+                {(categoryFilter !== 'all' || priorityFilter !== 'all'
+                  ? filteredComplaints.filter(c => c.verified === true)
+                  : complaints.filter(c => c.verified === true)
+                ).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -230,7 +267,10 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                {complaints.filter(c => c.priority === 'high').length || 0}
+                {(categoryFilter !== 'all' || priorityFilter !== 'all'
+                  ? filteredComplaints.filter(c => c.priority === 'high')
+                  : complaints.filter(c => c.priority === 'high')
+                ).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -240,7 +280,10 @@ const AdminHome = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {complaints.filter(c => c.isRegisteredUser === true).length || 0}
+                {(categoryFilter !== 'all' || priorityFilter !== 'all'
+                  ? filteredComplaints.filter(c => c.isRegisteredUser === true)
+                  : complaints.filter(c => c.isRegisteredUser === true)
+                ).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -281,7 +324,58 @@ const AdminHome = () => {
           {/* Bottom Section: Complaints Table */}
           <Card className="bg-card/95 backdrop-blur-sm border-destructive/20">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-foreground">Complaints Overview</CardTitle>
+              <div className="flex flex-col space-y-4">
+                <CardTitle className="text-xl font-bold text-foreground">Complaints Overview</CardTitle>
+
+                {/* Filter Section */}
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="category-filter">Filter by Category</Label>
+                    <Select value={categoryFilter} onValueChange={(value) => handleFilterChange('category', value)}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="Theft">Theft</SelectItem>
+                        <SelectItem value="Assault">Assault</SelectItem>
+                        <SelectItem value="CyberCrime">Cybercrime</SelectItem>
+                        <SelectItem value="MissingPerson">Missing Person</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priority-filter">Filter by Priority</Label>
+                    <Select value={priorityFilter} onValueChange={(value) => handleFilterChange('priority', value)}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="All Priorities" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(categoryFilter !== 'all' || priorityFilter !== 'all') && (
+                    <Button
+                      variant="outline"
+                      onClick={clearFilters}
+                      className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+
+                  <div className="text-sm text-muted-foreground ml-auto">
+                    Showing {filteredComplaints.length} of {complaints.length} complaints
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -301,20 +395,44 @@ const AdminHome = () => {
                       Retry
                     </Button>
                   </div>
-                ) : complaints.length === 0 ? (
+                ) : filteredComplaints.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 text-center">
                     <Shield className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">No Complaints Found</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      {categoryFilter !== 'all' || priorityFilter !== 'all' ? 'No Matching Complaints' : 'No Complaints Found'}
+                    </h3>
                     <p className="text-muted-foreground mb-4">
-                      There are currently no complaints in the system. New complaints will appear here when submitted.
+                      {categoryFilter !== 'all' || priorityFilter !== 'all'
+                        ? 'No complaints match your current filter criteria. Try adjusting your filters or clearing them to see all complaints.'
+                        : 'There are currently no complaints in the system. New complaints will appear here when submitted.'
+                      }
                     </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => fetchComplaints()}
-                      className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      Refresh
-                    </Button>
+                    {categoryFilter !== 'all' || priorityFilter !== 'all' ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={clearFilters}
+                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          Clear Filters
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => fetchComplaints()}
+                          className="text-muted-foreground border-muted-foreground hover:bg-muted-foreground hover:text-muted"
+                        >
+                          Refresh
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchComplaints()}
+                        className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        Refresh
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <Table>
@@ -385,7 +503,7 @@ const AdminHome = () => {
                 )}
 
                 {/* Pagination */}
-                {complaints.length > 0 && totalPages > 1 && (
+                {filteredComplaints.length > 0 && totalPages > 1 && (
                   <div className="mt-4 flex justify-center">
                     <Pagination>
                       <PaginationContent>
