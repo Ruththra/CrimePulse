@@ -381,7 +381,6 @@ const Auth = () => {
                   </div>
                   {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                 </div>
-
                 <div className="flex items-start gap-2">
                   <input
                     id="agreePolicy"
