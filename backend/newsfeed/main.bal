@@ -2,8 +2,8 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/lang.'string as string;
 
-// Set the NewsAPI key in Config.toml (e.g., apiKey="<your API key>")
-configurable string apiKey = ?;
+// Set the NewsAPI key in Config.toml (e.g., news_apiKey="<your API key>")
+configurable string news_apiKey = ?;
 
 // Service-level CORS config to allow all origins
 @http:ServiceConfig {
@@ -25,7 +25,7 @@ service /newsfeed on new http:Listener(8083) {
             + "?q=(crime%20OR%20murder%20OR%20robbery%20OR%20assault%20OR%20kidnapping)"
             + "%20AND%20(%22Sri%20Lanka%22%20OR%20Colombo%20OR%20Kandy%20OR%20Galle%20OR%20Jaffna)";
         
-        map<string|string[]> headers = { "X-Api-Key": apiKey };
+        map<string|string[]> headers = { "X-Api-Key": news_apiKey };
 
         http:Response|error resp = newsApiClient->get(query, headers);
         if (resp is error) {
