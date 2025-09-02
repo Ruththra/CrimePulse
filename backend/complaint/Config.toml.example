@@ -1,0 +1,11 @@
+MONGO_URI="your_mongo_connection_string"
+DB_NAME="your_database_name"
+COLLECTION_ASSAULT="your_assault_collection"
+COLLECTION_CYBERCRIME="your_cybercrime_collection"
+COLLECTION_MISSINGPERSON="your_missing_person_collection"
+COLLECTION_THEFT="your_theft_collection"
+COLLECTION_OTHER="your_other_collection"
+
+PORT=8081
+SERVER_URL="http://localhost:8081"
+FRONTEND_COMPLAINT_URL='http://localhost:8080'

@@ -1,0 +1,9 @@
+MONGO_URI="your_mongo_connection_string"
+DB_NAME="your_database_name"
+COLLECTION_ADMINS="your_admins_collection"
+COLLECTION_REGISTEREDUSERS="your_registered_users_collection"
+COLLECTION_UNREGISTEREDUSERS="your_unregistered_users_collection"
+
+PORT=8082
+SERVER_URL="http://localhost:8082"
+FRONTEND_AUTH_URL="http://localhost:8080"
