@@ -1,169 +1,209 @@
-# Crime Pulse — Anonymous Crime Reporting Platform
+# CrimePulse - Anonymous Crime Reporting Platform
 
-> Empowering citizens in Sri Lanka to report crimes **anonymously**, from anywhere.  
-> Heatmaps • Complaint workflow • Newsfeed • Admin dashboard
-
----
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/your-repo/crimepulse/blob/main/LICENSE)
+[![Get Support](https://img.shields.io/badge/Support-Community-orange)](https://github.com/your-repo/crimepulse/discussions)
 
 ## Table of Contents
 - [Overview](#overview)
-- [Key Features](#key-features)
+- [Demo](#demo)
+- [Core Features](#core-features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+    - [Frontend Installation](#frontend-installation)
+    - [Backend Services Installation](#backend-services-installation)
+- [Configuration](#configuration)
+    - [Environment Variables](#environment-variables)
+- [Running the Application](#running-the-application)
+- [Development & Testing](#development--testing)
+    - [Running Tests](#running-tests)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
-- [Monorepo Structure](#monorepo-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running Locally](#running-locally)
-- [Seeding Sample Data](#seeding-sample-data)
-- [Ballerina Services](#ballerina-services)
-- [MongoDB Data Models](#mongodb-data-models)
-- [API Endpoints](#api-endpoints)
-- [Admin Dashboard](#admin-dashboard)
-- [Security & Privacy](#security--privacy)
-- [FAQ](#faq)
-- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 
----
-
 ## Overview
-Crime Pulse is a web platform to submit crime complaints anonymously (or as a registered user). Complaints can include photos/videos and are routed to the local police station after admin verification. A public HeatMap shows approximate incident locations. A Newsfeed surfaces relevant crime-related news. An Admin interface reviews complaints and updates statuses.
 
----
+CrimePulse is a comprehensive web platform designed to empower citizens in Sri Lanka to report crimes anonymously from anywhere. The platform features heatmaps for crime visualization, a streamlined complaint workflow, integrated newsfeed, and an admin dashboard for efficient management. Built with modern web technologies and microservices architecture, it ensures privacy, security, and ease of use.
 
-## Key Features
->Anonymous & Registered reporting (auto-generated anonymous IDs)
+## Demo
 
->Complaint submission with media attachments (photo/video) and geotag
+This video demonstrates the CrimePulse platform's key features, including anonymous crime reporting, heatmap visualization, and admin dashboard functionality.
 
->HeatMap of approximate crime locations (privacy-preserving jitter)
+[![Demo Video](https://img.youtube.com/vi/rDuEvArJm0s/0.jpg)](https://youtu.be/rDuEvArJm0s)
 
->Newsfeed filtered via News API
+## Core Features
 
->FAQ & Emergency contacts
+- **Anonymous & Registered Reporting**: Submit complaints anonymously with auto-generated IDs or as a registered user
+- **Media Attachments**: Upload photos and videos with geotagging for detailed incident reporting
+- **Privacy-Preserving Heatmaps**: Visualize approximate crime locations with jitter for privacy protection
+- **Newsfeed Integration**: Curated crime-related news using News API
+- **Admin Dashboard**: Comprehensive interface for complaint review, status updates, and analytics
+- **Anti-Spam Protection**: Google reCAPTCHA integration for spam prevention
+- **Emergency Contacts & FAQ**: Quick access to important resources and frequently asked questions
 
->Admin dashboard: heatmap, category pie chart, complaint review & status changes
+## Prerequisites
 
->Anti-spam via Google reCAPTCHA
+- Node.js 18+
+- Ballerina 2201.8.0 or later
+- MongoDB (local or Atlas)
+- Git
 
----
+## Installation
+
+### Frontend Installation
+
+1. **Clone the repository:**
+    ```bash
+    git clone <repository_url>
+    cd crimepulse
+    ```
+
+2. **Install dependencies:**
+    ```bash
+    cd frontend
+    npm install
+    ```
+
+3. **Configure environment variables:**
+    Copy the example file and customize:
+    ```bash
+    cp .env.example .env
+    # Edit .env with your configuration
+    ```
+
+### Backend Services Installation
+
+1. **Navigate to backend services:**
+    ```bash
+    cd backend/auth
+    # Repeat for complaint and newsfeed
+    ```
+
+2. **Install Ballerina dependencies:**
+    ```bash
+    bal build
+    ```
+
+3. **Configure service configs:**
+    Copy example config files:
+    ```bash
+    cp Config.toml.example Config.toml
+    # Edit Config.toml with your settings
+    ```
+
+## Configuration
+
+### Environment Variables
+
+**Frontend (.env):**
+- `VITE_API_BASE_URL`: Base URL for backend APIs
+- `VITE_GOOGLE_MAPS_API_KEY`: Google Maps API key
+- `VITE_RECAPTCHA_SITE_KEY`: reCAPTCHA site key
+
+**Backend Services (Config.toml):**
+- `MONGO_URI`: MongoDB connection string
+- `DB_NAME`: Database name
+- `PORT`: Service port
+- `SERVER_URL`: Service URL
+- `FRONTEND_URL`: Frontend URL
+
+## Running the Application
+
+1. **Start MongoDB:**
+    Ensure MongoDB is running locally or configure Atlas connection.
+
+2. **Start Backend Services:**
+    ```bash
+    # Auth Service
+    cd backend/auth
+    bal run
+
+    # Complaint Service
+    cd ../complaint
+    bal run
+
+    # Newsfeed Service
+    cd ../newsfeed
+    bal run
+    ```
+
+3. **Start Frontend:**
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+
+4. **Access the application:**
+    Open http://localhost:5173 in your browser.
+
+## Development & Testing
+
+### Running Tests
+
+**Frontend Tests:**
+```bash
+cd frontend
+npm test
+```
+
+**Backend Tests:**
+```bash
+cd backend/<service>
+bal test
+```
 
 ## System Architecture
-[Web Client (React/TS)]
-  ├─ Map (Google Maps JS API)
-  ├─ Newsfeed (News API)
-  └─ reCAPTCHA
 
-      ⇅ HTTPS (JWT/Session)
+```
+[Frontend (React/TypeScript)]
+  ├─ Components (HeatMap, NewsTicker, etc.)
+  ├─ Pages (Auth, Complaint, Admin, etc.)
+  └─ State Management (Zustand)
 
-[Backend (Ballerina Microservices)]
-   ├─ auth-service          (login/register, JWT)
-   ├─ complaint-service     (CRUD, media, status)
-   ├─ heatmap-service       (aggregations, jitter)
-   ├─ news-service          (curation proxy to News API)
-   └─ admin-service         (moderation, metrics)
+      ⇅ HTTP/HTTPS
 
-[MongoDB Atlas/Server]
-   ├─ users
-   ├─ complaints
-   └─ audit_logs
+[Backend Microservices (Ballerina)]
+   ├─ auth-service (8082)
+   │   ├─ User authentication & JWT
+   │   └─ User management
+   ├─ complaint-service (8081)
+   │   ├─ Complaint CRUD operations
+   │   ├─ Media upload handling
+   │   └─ Status management
+   └─ newsfeed-service (8083)
+       ├─ News API integration
+       └─ Content curation
 
-[Object Storage (optional: S3/GCS/MinIO)]
-   └─ media uploads
+[MongoDB]
+   ├─ Users collection
+   ├─ Complaints collection
+   └─ Audit logs
 
-
----
+[External Services]
+   ├─ Google Maps API
+   ├─ News API
+   ├─ Cloudinary (media storage)
+   └─ Google reCAPTCHA
+```
 
 ## Tech Stack
-[List your frontend, backend, database, and APIs used.]
 
----
-
-## Monorepo Structure
-```
-crime-pulse/
-├─ apps/
-│  ├─ web/
-│  └─ admin/
-│
-├─ services/
-│  ├─ auth_service/
-│  ├─ complaint_service/
-│  ├─ heatmap_service/
-│  ├─ news_service/
-│  └─ admin_service/
-│
-├─ infra/
-│  ├─ docker/
-│  └─ k8s/
-│
-├─ scripts/
-├─ README.md
-└─ package.json / bal.toml
-```
-
----
-
-## Getting Started
-[Instructions on setup and installation.]
-
----
-
-## Environment Variables
-[Document required .env values here.]
-
----
-
-## Running Locally
-[Steps to run locally with Docker or manually.]
-
----
-
-## Seeding Sample Data
-[Instructions for seeding DB with sample data.]
-
----
-
-## Ballerina Services
-[List your Ballerina microservices and responsibilities.]
-
----
-
-## MongoDB Data Models
-[Document your MongoDB schema.]
-
----
-
-## API Endpoints
-[Document all key endpoints here.]
-
----
-
-## Admin Dashboard
-[Explain features available to admins.]
-
----
-
-## Security & Privacy
-[Notes on anonymity, data security, reCAPTCHA.]
-
----
-
-## FAQ
-[Add common questions and answers.]
-
----
-
-## Roadmap
-[Future improvements planned.]
-
----
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
+- **Backend**: Ballerina (microservices)
+- **Database**: MongoDB
+- **APIs**: Google Maps JS API, News API
+- **Authentication**: JWT
+<!-- - **Deployment**: Docker, Kubernetes (optional) -->
 
 ## Contributing
-[How to contribute guidelines.]
 
----
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
 ## License
-[State your license here.]
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
